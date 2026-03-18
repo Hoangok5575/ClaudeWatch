@@ -1,19 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Use vi.hoisted so mocks are available in factory functions
-const { mockHandle, mockQuit } = vi.hoisted(() => {
+const { mockHandle, mockQuit, mockApp } = vi.hoisted(() => {
   const mockHandle = vi.fn()
   const mockQuit = vi.fn()
-  return { mockHandle, mockQuit }
+  const mockApp = {
+    quit: mockQuit,
+    isQuitting: false
+  }
+  return { mockHandle, mockQuit, mockApp }
 })
 
 vi.mock('electron', () => ({
   ipcMain: {
     handle: mockHandle
   },
-  app: {
-    quit: mockQuit
-  },
+  app: mockApp,
   BrowserWindow: vi.fn()
 }))
 
@@ -80,6 +82,7 @@ describe('setupIpcHandlers', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockApp.isQuitting = false
     handlers = {}
     mockHandle.mockImplementation((channel: string, handler: (...args: unknown[]) => unknown) => {
       handlers[channel] = handler
@@ -184,10 +187,43 @@ describe('setupIpcHandlers', () => {
   })
 
   describe('app:quit', () => {
-    it('should call app.quit', () => {
+    it('should set app.isQuitting before calling app.quit', () => {
+      mockQuit.mockImplementation(() => {
+        expect(mockApp.isQuitting).toBe(true)
+      })
+
       handlers['app:quit']()
 
+      expect(mockApp.isQuitting).toBe(true)
       expect(mockQuit).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe('updater:install', () => {
+    it('should set app.isQuitting before installing the update', () => {
+      const quitAndInstall = vi.fn(() => {
+        expect(mockApp.isQuitting).toBe(true)
+      })
+
+      setupIpcHandlers({
+        tracker,
+        store,
+        updater: { quitAndInstall } as never,
+        usageReader,
+        promoChecker,
+        onOpenDashboard
+      })
+
+      handlers['updater:install']()
+
+      expect(mockApp.isQuitting).toBe(true)
+      expect(quitAndInstall).toHaveBeenCalledOnce()
+    })
+
+    it('should not mark the app as quitting when no updater is available', () => {
+      handlers['updater:install']()
+
+      expect(mockApp.isQuitting).toBe(false)
     })
   })
 

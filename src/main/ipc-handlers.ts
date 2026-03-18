@@ -44,6 +44,10 @@ interface IpcHandlerOptions {
 export function setupIpcHandlers(options: IpcHandlerOptions): void {
   const { tracker, store, updater, usageReader, promoChecker, onOpenDashboard } = options
 
+  const beginQuit = (): void => {
+    ;(app as Electron.App & { isQuitting?: boolean }).isQuitting = true
+  }
+
   ipcMain.handle('instances:get', () => {
     return {
       instances: tracker.getInstances(),
@@ -88,6 +92,7 @@ export function setupIpcHandlers(options: IpcHandlerOptions): void {
   })
 
   ipcMain.handle('app:quit', () => {
+    beginQuit()
     app.quit()
   })
 
@@ -100,7 +105,10 @@ export function setupIpcHandlers(options: IpcHandlerOptions): void {
   })
 
   ipcMain.handle('updater:install', () => {
-    updater?.quitAndInstall()
+    if (!updater) return
+
+    beginQuit()
+    updater.quitAndInstall()
   })
 
   ipcMain.handle('usage:get', () => {
