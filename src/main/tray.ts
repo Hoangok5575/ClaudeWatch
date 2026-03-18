@@ -1,10 +1,19 @@
-import { Tray, Menu, nativeImage, MenuItemConstructorOptions } from 'electron'
+import {
+  Tray,
+  BrowserWindow,
+  Menu,
+  nativeImage,
+  screen,
+  MenuItemConstructorOptions
+} from 'electron'
 import { join } from 'path'
+import { is } from '@electron-toolkit/utils'
 import type { ClaudeInstance, InstanceUpdate } from '../renderer/lib/types'
 
 interface TrayManagerOptions {
   onOpenDashboard: () => void
   onQuit: () => void
+  preloadPath: string
 }
 
 const STATUS_EMOJI: Record<ClaudeInstance['status'], string> = {
@@ -13,42 +22,136 @@ const STATUS_EMOJI: Record<ClaudeInstance['status'], string> = {
   exited: '\uD83D\uDD34'
 }
 
+const POPOVER_WIDTH = 320
+const POPOVER_HEIGHT = 420
+
 export class TrayManager {
   private tray: Tray | null = null
+  private popover: BrowserWindow | null = null
   private onOpenDashboard: () => void
   private onQuit: () => void
+  private preloadPath: string
+  private instances: ClaudeInstance[] = []
+  private stats: InstanceUpdate['stats'] = { total: 0, active: 0, idle: 0, exited: 0 }
 
   constructor(options: TrayManagerOptions) {
     this.onOpenDashboard = options.onOpenDashboard
     this.onQuit = options.onQuit
+    this.preloadPath = options.preloadPath
     this.createTray()
+    this.createPopover()
   }
 
   private createTray(): void {
-    // Create a minimal 16x16 template image for macOS menu bar
     const icon = nativeImage.createEmpty()
     this.tray = new Tray(icon)
     this.tray.setTitle('\u25CF 0')
     this.tray.setToolTip('Claude Tracker')
+
+    // Hover → show popover
+    this.tray.on('mouse-enter', () => {
+      this.showPopover()
+    })
+
+    // Click → toggle popover (fallback for accessibility)
+    this.tray.on('click', () => {
+      this.togglePopover()
+    })
+
+    // Right click → context menu
+    this.tray.on('right-click', () => {
+      this.showContextMenu()
+    })
   }
 
-  update(instances: ClaudeInstance[], stats: InstanceUpdate['stats']): void {
-    if (!this.tray) return
+  private createPopover(): void {
+    this.popover = new BrowserWindow({
+      width: POPOVER_WIDTH,
+      height: POPOVER_HEIGHT,
+      show: false,
+      frame: false,
+      resizable: false,
+      movable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      skipTaskbar: true,
+      transparent: true,
+      vibrancy: 'popover',
+      visualEffectState: 'active',
+      roundedCorners: true,
+      webPreferences: {
+        preload: this.preloadPath,
+        sandbox: false,
+        contextIsolation: true
+      }
+    })
 
-    this.tray.setTitle(`\u25CF ${stats.active}`)
+    // Hide on blur
+    this.popover.on('blur', () => {
+      this.hidePopover()
+    })
+
+    // Load the renderer with #popover hash
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      this.popover.loadURL(`${process.env['ELECTRON_RENDERER_URL']}#popover`)
+    } else {
+      this.popover.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'popover' })
+    }
+  }
+
+  private togglePopover(): void {
+    if (!this.popover) return
+
+    if (this.popover.isVisible()) {
+      this.hidePopover()
+    } else {
+      this.showPopover()
+    }
+  }
+
+  private showPopover(): void {
+    if (!this.popover || !this.tray) return
+
+    const trayBounds = this.tray.getBounds()
+    const display = screen.getDisplayNearestPoint({
+      x: trayBounds.x,
+      y: trayBounds.y
+    })
+
+    // Position below tray icon, centered horizontally
+    const x = Math.round(trayBounds.x + trayBounds.width / 2 - POPOVER_WIDTH / 2)
+    const y = trayBounds.y + trayBounds.height + 4
+
+    // Clamp to screen bounds
+    const clampedX = Math.max(
+      display.workArea.x,
+      Math.min(x, display.workArea.x + display.workArea.width - POPOVER_WIDTH)
+    )
+
+    this.popover.setPosition(clampedX, y)
+    this.popover.show()
+  }
+
+  private hidePopover(): void {
+    if (this.popover?.isVisible()) {
+      this.popover.hide()
+    }
+  }
+
+  private showContextMenu(): void {
+    if (!this.tray) return
 
     const menuItems: MenuItemConstructorOptions[] = []
 
-    // Header
     menuItems.push({
-      label: `Claude Tracker \u2014 ${stats.total} instance${stats.total !== 1 ? 's' : ''}`,
+      label: `Claude Tracker \u2014 ${this.stats.total} instance${this.stats.total !== 1 ? 's' : ''}`,
       enabled: false
     })
     menuItems.push({ type: 'separator' })
 
-    // Instance list (max 10)
     const maxShown = 10
-    const shown = instances.slice(0, maxShown)
+    const shown = this.instances.slice(0, maxShown)
     for (const inst of shown) {
       const emoji = STATUS_EMOJI[inst.status] ?? '\u26AA'
       menuItems.push({
@@ -56,24 +159,19 @@ export class TrayManager {
         enabled: false
       })
     }
-    if (instances.length > maxShown) {
+    if (this.instances.length > maxShown) {
       menuItems.push({
-        label: `  +${instances.length - maxShown} more`,
+        label: `  +${this.instances.length - maxShown} more`,
         enabled: false
       })
     }
 
-    if (instances.length > 0) {
+    if (this.instances.length > 0) {
       menuItems.push({ type: 'separator' })
     }
 
-    // Actions
     menuItems.push({
       label: 'Open Dashboard',
-      click: () => this.onOpenDashboard()
-    })
-    menuItems.push({
-      label: 'Settings',
       click: () => this.onOpenDashboard()
     })
     menuItems.push({ type: 'separator' })
@@ -83,10 +181,27 @@ export class TrayManager {
     })
 
     const contextMenu = Menu.buildFromTemplate(menuItems)
-    this.tray.setContextMenu(contextMenu)
+    this.tray.popUpContextMenu(contextMenu)
+  }
+
+  update(instances: ClaudeInstance[], stats: InstanceUpdate['stats']): void {
+    if (!this.tray) return
+
+    this.instances = instances
+    this.stats = stats
+
+    this.tray.setTitle(`\u25CF ${stats.active}`)
+  }
+
+  getPopoverWindow(): BrowserWindow | null {
+    return this.popover
   }
 
   destroy(): void {
+    if (this.popover) {
+      this.popover.destroy()
+      this.popover = null
+    }
     if (this.tray) {
       this.tray.destroy()
       this.tray = null

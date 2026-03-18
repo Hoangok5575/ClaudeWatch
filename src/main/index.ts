@@ -74,13 +74,14 @@ app.whenReady().then(() => {
   // Create window (hidden by default)
   mainWindow = createWindow()
 
-  // Create tray
+  // Create tray with popover support
   trayManager = new TrayManager({
     onOpenDashboard: showDashboard,
     onQuit: () => {
       app.isQuitting = true
       app.quit()
-    }
+    },
+    preloadPath: join(__dirname, '../preload/index.js')
   })
 
   // Setup IPC bridge
@@ -90,8 +91,12 @@ app.whenReady().then(() => {
     onOpenDashboard: showDashboard
   })
 
-  // Forward tracker updates to renderer and tray
-  forwardUpdatesToRenderer(tracker, () => mainWindow)
+  // Forward tracker updates to renderer windows (main + popover) and tray
+  forwardUpdatesToRenderer(
+    tracker,
+    () => mainWindow,
+    () => trayManager?.getPopoverWindow() ?? null
+  )
 
   tracker.on('update', (data) => {
     trayManager?.update(data.instances, data.stats)
