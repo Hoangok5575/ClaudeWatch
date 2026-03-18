@@ -8,11 +8,12 @@ import {
 } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import type { ClaudeInstance, InstanceUpdate } from '../renderer/lib/types'
+import type { ClaudeInstance, InstanceUpdate, PromoStatus } from '../renderer/lib/types'
 
 interface TrayManagerOptions {
   onOpenDashboard: () => void
   onQuit: () => void
+  onCheckForUpdates?: () => void
   preloadPath: string
 }
 
@@ -30,13 +31,16 @@ export class TrayManager {
   private popover: BrowserWindow | null = null
   private onOpenDashboard: () => void
   private onQuit: () => void
+  private onCheckForUpdates?: () => void
   private preloadPath: string
   private instances: ClaudeInstance[] = []
   private stats: InstanceUpdate['stats'] = { total: 0, active: 0, idle: 0, exited: 0 }
+  private promoStatus: PromoStatus | null = null
 
   constructor(options: TrayManagerOptions) {
     this.onOpenDashboard = options.onOpenDashboard
     this.onQuit = options.onQuit
+    this.onCheckForUpdates = options.onCheckForUpdates
     this.preloadPath = options.preloadPath
     this.createTray()
     this.createPopover()
@@ -144,6 +148,17 @@ export class TrayManager {
 
     const menuItems: MenuItemConstructorOptions[] = []
 
+    if (this.promoStatus?.is2x && this.promoStatus.expiresInSeconds != null) {
+      const h = Math.floor(this.promoStatus.expiresInSeconds / 3600)
+      const m = Math.floor((this.promoStatus.expiresInSeconds % 3600) / 60)
+      const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`
+      menuItems.push({
+        label: `2x Active \u2014 expires in ${timeStr}`,
+        enabled: false
+      })
+      menuItems.push({ type: 'separator' })
+    }
+
     menuItems.push({
       label: `ClaudeWatch \u2014 ${this.stats.total} instance${this.stats.total !== 1 ? 's' : ''}`,
       enabled: false
@@ -174,6 +189,12 @@ export class TrayManager {
       label: 'Open Dashboard',
       click: () => this.onOpenDashboard()
     })
+    if (this.onCheckForUpdates) {
+      menuItems.push({
+        label: 'Check for Updates',
+        click: () => this.onCheckForUpdates?.()
+      })
+    }
     menuItems.push({ type: 'separator' })
     menuItems.push({
       label: 'Quit',
@@ -190,7 +211,19 @@ export class TrayManager {
     this.instances = instances
     this.stats = stats
 
-    this.tray.setTitle(`\u25CF ${stats.active}`)
+    this.updateTrayTitle()
+  }
+
+  updatePromoStatus(promo: PromoStatus): void {
+    this.promoStatus = promo
+    this.updateTrayTitle()
+  }
+
+  private updateTrayTitle(): void {
+    if (!this.tray) return
+
+    const prefix = this.promoStatus?.is2x ? '2x ' : ''
+    this.tray.setTitle(`${prefix}\u25CF ${this.stats.active}`)
   }
 
   getPopoverWindow(): BrowserWindow | null {
