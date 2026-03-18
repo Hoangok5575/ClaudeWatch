@@ -59,6 +59,14 @@ export function useInstances(): UseInstancesReturn {
       )
     }
 
+    // Sort by activity: active (by CPU desc) → idle (by CPU desc) → exited
+    const statusOrder: Record<string, number> = { active: 0, idle: 1, exited: 2 }
+    result = [...result].sort((a, b) => {
+      const statusDiff = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3)
+      if (statusDiff !== 0) return statusDiff
+      return b.cpuPercent - a.cpuPercent
+    })
+
     return result
   }, [instances, filter, searchQuery])
 

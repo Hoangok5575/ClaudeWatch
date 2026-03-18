@@ -71,7 +71,7 @@ export function SessionHistory() {
             {history.map((entry) => (
               <div
                 key={`${entry.pid}-${String(entry.startedAt)}`}
-                className="glass-card flex items-center gap-3 px-4 py-3"
+                className="card flex items-center gap-3 px-4 py-3"
                 role="listitem"
               >
                 <StatusBadge status={entry.status} />

@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronDown, Cpu, MemoryStick, Terminal } from 'lucide-react'
+import { ChevronDown, Cpu, MemoryStick, Terminal, ExternalLink } from 'lucide-react'
 import { cn, formatElapsedTime } from '../lib/utils'
 import type { ClaudeInstance } from '../lib/types'
 import { StatusBadge } from './StatusBadge'
-import { ProjectTag } from './ProjectTag'
 
 interface InstanceCardProps {
   instance: ClaudeInstance
@@ -36,8 +35,15 @@ export function InstanceCard({ instance }: InstanceCardProps) {
     }
   }, [instance.elapsedSeconds, instance.status, instance.pid])
 
+  const handleOpenWarp = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (typeof window !== 'undefined' && window.api?.openTerminal) {
+      window.api.openTerminal(instance.projectPath)
+    }
+  }
+
   return (
-    <div className="glass-card-hover overflow-hidden">
+    <div className="card-interactive no-drag animate-fade-in overflow-hidden">
       <button
         type="button"
         className="flex w-full items-center gap-3 px-4 py-3 text-left"
@@ -45,38 +51,36 @@ export function InstanceCard({ instance }: InstanceCardProps) {
         aria-expanded={expanded}
         aria-label={`${instance.projectName} - ${instance.status}`}
       >
-        {/* Left: status + project */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <StatusBadge status={instance.status} />
-          <ProjectTag projectName={instance.projectName} projectPath={instance.projectPath} />
+        {/* Status dot */}
+        <StatusBadge status={instance.status} showLabel={false} />
+
+        {/* Project info */}
+        <div className="min-w-0 flex-1">
+          <span className="block truncate text-heading text-text-primary">
+            {instance.projectName}
+          </span>
+          <span className="block truncate font-mono text-caption text-text-tertiary">
+            {instance.projectPath}
+          </span>
         </div>
 
-        {/* Center: elapsed + flags */}
-        <div className="flex items-center gap-3 text-xs text-text-secondary">
-          <span className="font-mono tabular-nums" aria-label="Elapsed time">
+        {/* Metrics cluster — right aligned */}
+        <div className="flex items-center gap-4 text-mono-sm text-text-secondary">
+          <span className="tabular-nums" aria-label="Elapsed time">
             {formatElapsedTime(elapsed)}
           </span>
-          {instance.flags.length > 0 && (
-            <span className="hidden truncate sm:inline" title={instance.flags.join(' ')}>
-              {instance.flags.slice(0, 2).join(' ')}
-            </span>
-          )}
-        </div>
-
-        {/* Right: resource usage + expand */}
-        <div className="flex items-center gap-3 text-xs text-text-secondary">
           <span
-            className="inline-flex items-center gap-1"
+            className="inline-flex items-center gap-1 tabular-nums"
             aria-label={`CPU: ${instance.cpuPercent.toFixed(1)}%`}
           >
-            <Cpu className="h-3 w-3" aria-hidden="true" />
+            <Cpu className="h-3 w-3 text-text-tertiary" aria-hidden="true" />
             {instance.cpuPercent.toFixed(1)}%
           </span>
           <span
-            className="inline-flex items-center gap-1"
+            className="inline-flex items-center gap-1 tabular-nums"
             aria-label={`Memory: ${instance.memPercent.toFixed(1)}%`}
           >
-            <MemoryStick className="h-3 w-3" aria-hidden="true" />
+            <MemoryStick className="h-3 w-3 text-text-tertiary" aria-hidden="true" />
             {instance.memPercent.toFixed(1)}%
           </span>
           <ChevronDown
@@ -92,11 +96,11 @@ export function InstanceCard({ instance }: InstanceCardProps) {
       {/* Expanded detail panel */}
       {expanded && (
         <div
-          className="border-t border-border px-4 py-3 text-xs text-text-secondary"
+          className="border-t border-border px-4 py-3 text-mono-sm text-text-secondary"
           role="region"
           aria-label="Instance details"
         >
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-3">
             <div className="flex items-center gap-1.5">
               <Terminal className="h-3 w-3 text-text-tertiary" aria-hidden="true" />
               <span>PID: {instance.pid}</span>
@@ -104,15 +108,25 @@ export function InstanceCard({ instance }: InstanceCardProps) {
             <div>
               <span>TTY: {instance.tty}</span>
             </div>
-            <div className="col-span-2 truncate" title={instance.projectPath}>
-              Path: {instance.projectPath}
-            </div>
             {instance.sessionId && (
-              <div className="col-span-2 truncate">Session: {instance.sessionId}</div>
+              <div className="truncate">
+                <span>Session: {instance.sessionId}</span>
+              </div>
             )}
-            {instance.flags.length > 0 && (
-              <div className="col-span-2">Flags: {instance.flags.join(' ')}</div>
-            )}
+          </div>
+          {instance.flags.length > 0 && (
+            <div className="mt-2 text-text-tertiary">Flags: {instance.flags.join(' ')}</div>
+          )}
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={handleOpenWarp}
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+              aria-label="Open in Warp terminal"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              Open in Warp
+            </button>
           </div>
         </div>
       )}

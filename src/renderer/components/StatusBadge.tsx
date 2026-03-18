@@ -3,6 +3,7 @@ import type { ClaudeInstance } from '../lib/types'
 
 interface StatusBadgeProps {
   status: ClaudeInstance['status']
+  showLabel?: boolean
   className?: string
 }
 
@@ -27,7 +28,7 @@ const statusConfig: Record<
   }
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, showLabel = true, className }: StatusBadgeProps) {
   const config = statusConfig[status]
 
   return (
@@ -40,8 +41,15 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       role="status"
       aria-label={`Status: ${config.label}`}
     >
-      <span className={cn('h-2 w-2 rounded-full', config.dotClass)} aria-hidden="true" />
-      {config.label}
+      <span
+        className={cn(
+          'h-2 w-2 rounded-full',
+          config.dotClass,
+          status === 'active' && 'animate-pulse-dot'
+        )}
+        aria-hidden="true"
+      />
+      {showLabel && config.label}
     </span>
   )
 }

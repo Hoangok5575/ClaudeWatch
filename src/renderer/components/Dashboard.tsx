@@ -10,6 +10,13 @@ const filterButtons: { filter: StatusFilter; label: string }[] = [
   { filter: 'exited', label: 'Exited' }
 ]
 
+const statusBorderColors: Record<string, string> = {
+  total: 'border-l-accent',
+  active: 'border-l-status-active',
+  idle: 'border-l-status-idle',
+  exited: 'border-l-status-exited'
+}
+
 const statCards: {
   key: keyof ReturnType<typeof useInstances>['stats']
   label: string
@@ -47,20 +54,22 @@ export function Dashboard() {
     useInstances()
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-hidden p-4">
+    <div className="flex h-full flex-col gap-5 overflow-hidden p-5">
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3" role="region" aria-label="Instance statistics">
         {statCards.map(({ key, label, icon: Icon, colorClass }) => (
-          <div key={key} className="stat-card">
-            <Icon className={cn('mb-1 h-4 w-4', colorClass)} aria-hidden="true" />
+          <div key={key} className={cn('stat-card border-l-2', statusBorderColors[key])}>
+            <div className="flex items-center gap-1.5">
+              <Icon className={cn('h-3.5 w-3.5', colorClass)} aria-hidden="true" />
+              <span className="text-caption uppercase tracking-wider text-text-secondary">
+                {label}
+              </span>
+            </div>
             <span
-              className="text-2xl font-bold tabular-nums text-text-primary"
+              className="text-stat tabular-nums text-text-primary"
               aria-label={`${label}: ${stats[key]}`}
             >
               {stats[key]}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider text-text-secondary">
-              {label}
             </span>
           </div>
         ))}
@@ -68,18 +77,17 @@ export function Dashboard() {
 
       {/* Filter bar */}
       <div className="flex items-center gap-2">
-        <div className="flex gap-1" role="group" aria-label="Filter by status">
+        <div
+          className="flex gap-1 rounded-full bg-surface-raised p-1"
+          role="group"
+          aria-label="Filter by status"
+        >
           {filterButtons.map(({ filter: f, label }) => (
             <button
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={cn(
-                'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
-                filter === f
-                  ? 'bg-accent/15 text-accent'
-                  : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
-              )}
+              className={cn(filter === f ? 'filter-btn-active' : 'filter-btn')}
               aria-pressed={filter === f}
             >
               {label}
@@ -97,7 +105,7 @@ export function Dashboard() {
             placeholder="Search instances..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 w-48 rounded-lg border border-border bg-surface-card pl-8 pr-3 text-xs text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+            className="h-9 w-64 rounded-card border border-border bg-surface-raised pl-8 pr-3 text-xs text-text-primary placeholder:text-text-tertiary focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent-ring"
             aria-label="Search instances"
           />
         </div>

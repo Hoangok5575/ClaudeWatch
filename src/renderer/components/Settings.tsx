@@ -83,7 +83,7 @@ export function Settings() {
       <h2 className="text-sm font-semibold text-text-primary">Settings</h2>
 
       {/* Polling interval */}
-      <section className="glass-card p-4" aria-labelledby="polling-heading">
+      <section className="card p-4" aria-labelledby="polling-heading">
         <h3
           id="polling-heading"
           className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary"
@@ -136,7 +136,7 @@ export function Settings() {
       </section>
 
       {/* Notifications */}
-      <section className="glass-card p-4" aria-labelledby="notif-heading">
+      <section className="card p-4" aria-labelledby="notif-heading">
         <h3
           id="notif-heading"
           className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-text-secondary"
@@ -210,7 +210,7 @@ export function Settings() {
       </section>
 
       {/* Appearance */}
-      <section className="glass-card p-4" aria-labelledby="appearance-heading">
+      <section className="card p-4" aria-labelledby="appearance-heading">
         <h3
           id="appearance-heading"
           className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary"
@@ -243,7 +243,7 @@ export function Settings() {
       </section>
 
       {/* System */}
-      <section className="glass-card p-4" aria-labelledby="system-heading">
+      <section className="card p-4" aria-labelledby="system-heading">
         <h3
           id="system-heading"
           className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-text-secondary"
