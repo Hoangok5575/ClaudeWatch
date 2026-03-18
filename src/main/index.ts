@@ -6,8 +6,12 @@ import { SessionTracker } from './session-tracker'
 import { SettingsStore } from './store'
 import { TrayManager } from './tray'
 import { NotificationManager } from './notifications'
+import { AutoUpdaterManager } from './auto-updater'
+import { UsageStatsReader } from './usage-stats'
+import { PromoChecker } from './promo-checker'
 import { setupIpcHandlers, forwardUpdatesToRenderer } from './ipc-handlers'
 import { createWidgetStatsWriter } from './widget-stats-writer'
+import { SoundPlayer } from './sound-player'
 
 let mainWindow: BrowserWindow | null = null
 let trayManager: TrayManager | null = null
@@ -69,11 +73,18 @@ app.whenReady().then(() => {
     maxHistoryEntries: settings.maxHistoryEntries
   })
 
-  // Initialize notifications
+  // Initialize notifications and sound player
   const notifications = new NotificationManager(() => store.getSettings())
+  const soundPlayer = new SoundPlayer()
 
   // Create window (hidden by default)
   mainWindow = createWindow()
+
+  // Initialize auto-updater
+  const updater = new AutoUpdaterManager([
+    () => mainWindow,
+    () => trayManager?.getPopoverWindow() ?? null
+  ])
 
   // Create tray with popover support
   trayManager = new TrayManager({
@@ -82,13 +93,25 @@ app.whenReady().then(() => {
       app.isQuitting = true
       app.quit()
     },
+    onCheckForUpdates: () => updater.checkForUpdates(),
     preloadPath: join(__dirname, '../preload/index.js')
   })
+
+  // Initialize usage stats reader and promo checker
+  const windowGetters: (() => Electron.BrowserWindow | null)[] = [
+    () => mainWindow,
+    () => trayManager?.getPopoverWindow() ?? null
+  ]
+  const usageReader = new UsageStatsReader(windowGetters)
+  const promoChecker = new PromoChecker(windowGetters)
 
   // Setup IPC bridge
   setupIpcHandlers({
     tracker,
     store,
+    updater,
+    usageReader,
+    promoChecker,
     onOpenDashboard: showDashboard
   })
 
@@ -107,15 +130,26 @@ app.whenReady().then(() => {
 
   tracker.on('update', (data) => {
     trayManager?.update(data.instances, data.stats)
-    // Write stats for macOS WidgetKit widget
-    widgetWriter?.write(data.instances, data.stats).catch(() => {
-      // Silently ignore widget write errors — widget is optional
-    })
+    // Write stats for macOS WidgetKit widget (include usage + promo data)
+    widgetWriter
+      ?.write(data.instances, data.stats, usageReader.getLastData(), promoChecker.getLastData())
+      .catch(() => {
+        // Silently ignore widget write errors — widget is optional
+      })
   })
 
   // Wire notification events
   tracker.on('instance-status-changed', ({ instance, previousStatus }) => {
-    if (instance.status === 'idle') {
+    if (previousStatus === 'active' && instance.status === 'idle') {
+      // Task just finished (active → idle) — fire task complete notification
+      notifications.notifyTaskComplete(instance)
+
+      const currentSettings = store.getSettings()
+      if (currentSettings.notifications.pingSound && !currentSettings.notifications.doNotDisturb) {
+        soundPlayer.playTaskComplete()
+      }
+    } else if (instance.status === 'idle') {
+      // Other transition to idle (not from active) — use regular idle notification
       notifications.notifyIdle(instance)
     }
   })
@@ -125,8 +159,26 @@ app.whenReady().then(() => {
     notifications.notifyExited(entry)
   })
 
+  // Forward promo updates to tray
+  promoChecker.startPolling(60_000)
+  setInterval(() => {
+    const promo = promoChecker.getLastData()
+    if (promo) trayManager?.updatePromoStatus(promo)
+  }, 60_000)
+  // Initial promo check for tray
+  setTimeout(() => {
+    const promo = promoChecker.getLastData()
+    if (promo) trayManager?.updatePromoStatus(promo)
+  }, 1000)
+
+  // Start usage stats polling (every 30s)
+  usageReader.startPolling(30_000)
+
   // Start polling
   tracker.start(settings.pollingIntervalMs)
+
+  // Start auto-update checks (every 4 hours, first check after 10s)
+  updater.startAutoCheck()
 })
 
 // macOS: keep app running when all windows are closed (tray app)
