@@ -135,6 +135,29 @@ export function Settings() {
             </span>
           </div>
         </SettingRow>
+
+        <SettingRow
+          label="Stale Threshold"
+          description={`Idle instances are marked stale after ${settings.staleThresholdMinutes} min and excluded from counts`}
+        >
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={5}
+              max={120}
+              step={5}
+              value={settings.staleThresholdMinutes}
+              onChange={(e) =>
+                updateSettings({ staleThresholdMinutes: parseInt(e.target.value, 10) })
+              }
+              className="h-1.5 w-24 appearance-none rounded-full bg-border accent-accent"
+              aria-label="Stale threshold in minutes"
+            />
+            <span className="w-12 text-right text-xs tabular-nums text-text-secondary">
+              {settings.staleThresholdMinutes}m
+            </span>
+          </div>
+        </SettingRow>
       </section>
 
       {/* Notifications */}
@@ -238,6 +261,38 @@ export function Settings() {
         </SettingRow>
       </section>
 
+      {/* Usage */}
+      <section className="card p-4" aria-labelledby="usage-heading">
+        <h3
+          id="usage-heading"
+          className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary"
+        >
+          Usage Limits
+        </h3>
+
+        <SettingRow
+          label="Weekly Token Target"
+          description={`Track usage against ${(settings.weeklyTokenTarget / 1_000_000).toFixed(1)}M tokens/week`}
+        >
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={100000}
+              max={100000000}
+              step={500000}
+              value={settings.weeklyTokenTarget}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10)
+                if (!isNaN(val)) updateSettings({ weeklyTokenTarget: val })
+              }}
+              className="h-8 w-24 rounded-md border border-border bg-surface-raised px-2 text-right text-xs tabular-nums text-text-primary focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent-ring"
+              aria-label="Weekly token target"
+            />
+            <span className="text-xs text-text-secondary">tokens</span>
+          </div>
+        </SettingRow>
+      </section>
+
       {/* Appearance */}
       <section className="card p-4" aria-labelledby="appearance-heading">
         <h3
@@ -286,6 +341,17 @@ export function Settings() {
             checked={settings.launchAtLogin}
             onChange={(val) => updateSettings({ launchAtLogin: val })}
             label="Launch at login"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Minimize to Tray"
+          description="Hide window to tray instead of minimizing to dock"
+        >
+          <ToggleSwitch
+            checked={settings.minimizeToTray}
+            onChange={(val) => updateSettings({ minimizeToTray: val })}
+            label="Minimize to tray"
           />
         </SettingRow>
       </section>

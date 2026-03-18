@@ -11,6 +11,7 @@ const emptyStats: InstanceUpdate['stats'] = {
   total: 0,
   active: 0,
   idle: 0,
+  stale: 0,
   exited: 0,
   recentlyCompleted: 0
 }
@@ -18,12 +19,14 @@ const emptyStats: InstanceUpdate['stats'] = {
 const statusColors: Record<ClaudeInstance['status'], string> = {
   active: 'bg-status-active',
   idle: 'bg-status-idle',
+  stale: 'bg-text-tertiary',
   exited: 'bg-status-exited'
 }
 
 const statusIcons: Record<ClaudeInstance['status'], typeof Activity> = {
   active: Activity,
   idle: Moon,
+  stale: Moon,
   exited: XCircle
 }
 
@@ -31,6 +34,7 @@ interface GroupedInstances {
   recentlyCompleted: ClaudeInstance[]
   inProgress: ClaudeInstance[]
   waiting: ClaudeInstance[]
+  stale: ClaudeInstance[]
 }
 
 export function PopoverView() {
@@ -56,20 +60,29 @@ export function PopoverView() {
   }, [])
 
   const sorted = [...instances].sort((a, b) => {
-    const order: Record<string, number> = { active: 0, idle: 1, exited: 2 }
-    const diff = (order[a.status] ?? 3) - (order[b.status] ?? 3)
+    const order: Record<string, number> = { active: 0, idle: 1, stale: 2, exited: 3 }
+    const diff = (order[a.status] ?? 4) - (order[b.status] ?? 4)
     if (diff !== 0) return diff
     return b.cpuPercent - a.cpuPercent
   })
 
+  // Tick every 30s so items age out of "Recently Done" without waiting for a poll
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(interval)
+  }, [])
+
   const grouped = useMemo((): GroupedInstances => {
-    const now = Date.now()
     const recentlyCompleted: ClaudeInstance[] = []
     const inProgress: ClaudeInstance[] = []
     const waiting: ClaudeInstance[] = []
+    const stale: ClaudeInstance[] = []
 
     for (const inst of sorted) {
-      if (inst.status === 'active') {
+      if (inst.status === 'stale') {
+        stale.push(inst)
+      } else if (inst.status === 'active') {
         inProgress.push(inst)
       } else if (
         inst.status === 'idle' &&
@@ -82,13 +95,14 @@ export function PopoverView() {
       }
     }
 
-    return { recentlyCompleted, inProgress, waiting }
-  }, [sorted])
+    return { recentlyCompleted, inProgress, waiting, stale }
+  }, [sorted, now])
 
   const hasGroupedContent =
     grouped.recentlyCompleted.length > 0 ||
     grouped.inProgress.length > 0 ||
-    grouped.waiting.length > 0
+    grouped.waiting.length > 0 ||
+    grouped.stale.length > 0
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-surface">
@@ -117,6 +131,12 @@ export function PopoverView() {
             <span className="inline-block h-2 w-2 rounded-full bg-status-idle" />
             <span className="text-status-idle">{stats.idle}</span>
           </span>
+          {stats.stale > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-text-tertiary" />
+              <span className="text-text-tertiary">{stats.stale}</span>
+            </span>
+          )}
           <span className="inline-flex items-center gap-1.5">
             <span className="inline-block h-2 w-2 rounded-full bg-status-exited" />
             <span className="text-status-exited">{stats.exited}</span>
@@ -126,10 +146,18 @@ export function PopoverView() {
 
       {/* Usage bar */}
       {usage?.dataAvailable && (
-        <div className="border-b border-border px-4 py-2 text-[11px] tabular-nums text-text-secondary">
-          {formatCurrency(usage.totalCostUSD)} &middot;{' '}
-          {formatCompactNumber(usage.totalInputTokens)} in &middot;{' '}
-          {formatCompactNumber(usage.totalOutputTokens)} out
+        <div className="border-b border-border px-4 py-2">
+          <div className="text-[11px] tabular-nums text-text-secondary">
+            {formatCurrency(usage.totalCostUSD)} &middot;{' '}
+            {formatCompactNumber(usage.totalInputTokens)} in &middot;{' '}
+            {formatCompactNumber(usage.totalOutputTokens)} out
+          </div>
+          {usage.weeklyTokenTarget > 0 && (
+            <PopoverWeeklyBar
+              weeklyTokens={usage.weeklyTokens}
+              weeklyTokenTarget={usage.weeklyTokenTarget}
+            />
+          )}
         </div>
       )}
 
@@ -141,6 +169,13 @@ export function PopoverView() {
           </div>
         ) : (
           <div>
+            {grouped.inProgress.length > 0 && (
+              <PopoverSection
+                label="In Progress"
+                colorClass="text-status-active"
+                instances={grouped.inProgress}
+              />
+            )}
             {grouped.recentlyCompleted.length > 0 && (
               <PopoverSection
                 label="Recently Done"
@@ -150,18 +185,19 @@ export function PopoverView() {
                 dotColor="bg-emerald-400"
               />
             )}
-            {grouped.inProgress.length > 0 && (
-              <PopoverSection
-                label="In Progress"
-                colorClass="text-status-active"
-                instances={grouped.inProgress}
-              />
-            )}
             {grouped.waiting.length > 0 && (
               <PopoverSection
                 label="Waiting"
                 colorClass="text-status-idle"
                 instances={grouped.waiting}
+              />
+            )}
+            {grouped.stale.length > 0 && (
+              <PopoverSection
+                label="Stale"
+                colorClass="text-text-tertiary"
+                instances={grouped.stale}
+                dotColor="bg-text-tertiary"
               />
             )}
           </div>
@@ -237,7 +273,8 @@ function PopoverInstanceRow({
   useEffect(() => {
     setElapsed(instance.elapsedSeconds)
 
-    if (instance.status !== 'active' && instance.status !== 'idle') return
+    if (instance.status !== 'active' && instance.status !== 'idle' && instance.status !== 'stale')
+      return
 
     const interval = setInterval(() => {
       setElapsed((prev) => prev + 1)
@@ -289,10 +326,42 @@ function PopoverInstanceRow({
           'text-emerald-400': !!iconOverride,
           'text-status-active': !iconOverride && instance.status === 'active',
           'text-status-idle': !iconOverride && instance.status === 'idle',
+          'text-text-tertiary': !iconOverride && instance.status === 'stale',
           'text-status-exited': !iconOverride && instance.status === 'exited'
         })}
         aria-label={instance.status}
       />
+    </div>
+  )
+}
+
+function PopoverWeeklyBar({
+  weeklyTokens,
+  weeklyTokenTarget
+}: {
+  weeklyTokens: number
+  weeklyTokenTarget: number
+}) {
+  const percent = Math.min(100, (weeklyTokens / weeklyTokenTarget) * 100)
+  const barColor =
+    percent >= 80 ? 'bg-red-400' : percent >= 60 ? 'bg-amber-400' : 'bg-status-active'
+
+  return (
+    <div className="mt-1.5 flex items-center gap-2">
+      <div className="h-1 flex-1 overflow-hidden rounded-full bg-border">
+        <div
+          className={cn('h-full rounded-full transition-all duration-500', barColor)}
+          style={{ width: `${percent}%` }}
+          role="progressbar"
+          aria-valuenow={Math.round(percent)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Weekly token usage"
+        />
+      </div>
+      <span className="shrink-0 text-[10px] tabular-nums text-text-tertiary">
+        {formatCompactNumber(weeklyTokens)}/{formatCompactNumber(weeklyTokenTarget)}
+      </span>
     </div>
   )
 }

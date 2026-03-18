@@ -171,6 +171,7 @@ export function Dashboard() {
             recentlyCompleted={groupedInstances.recentlyCompleted}
             inProgress={groupedInstances.inProgress}
             waiting={groupedInstances.waiting}
+            stale={groupedInstances.stale}
           />
         ) : (
           <InstanceList instances={filteredInstances} />
@@ -183,13 +184,16 @@ export function Dashboard() {
 function GroupedInstanceList({
   recentlyCompleted,
   inProgress,
-  waiting
+  waiting,
+  stale
 }: {
   recentlyCompleted: ClaudeInstance[]
   inProgress: ClaudeInstance[]
   waiting: ClaudeInstance[]
+  stale: ClaudeInstance[]
 }) {
-  const hasAny = recentlyCompleted.length > 0 || inProgress.length > 0 || waiting.length > 0
+  const hasAny =
+    recentlyCompleted.length > 0 || inProgress.length > 0 || waiting.length > 0 || stale.length > 0
 
   if (!hasAny) {
     return <InstanceList instances={[]} />
@@ -197,6 +201,15 @@ function GroupedInstanceList({
 
   return (
     <div className="flex flex-col gap-4">
+      {inProgress.length > 0 && (
+        <InstanceSection
+          label="In Progress"
+          icon={<Activity className="h-3 w-3 animate-pulse" aria-hidden="true" />}
+          colorClass="text-status-active"
+          borderClass="border-l-status-active"
+          instances={inProgress}
+        />
+      )}
       {recentlyCompleted.length > 0 && (
         <InstanceSection
           label="Recently Completed"
@@ -207,15 +220,6 @@ function GroupedInstanceList({
           showTimeAgo
         />
       )}
-      {inProgress.length > 0 && (
-        <InstanceSection
-          label="In Progress"
-          icon={<Activity className="h-3 w-3 animate-pulse" aria-hidden="true" />}
-          colorClass="text-status-active"
-          borderClass="border-l-status-active"
-          instances={inProgress}
-        />
-      )}
       {waiting.length > 0 && (
         <InstanceSection
           label="Waiting"
@@ -223,6 +227,15 @@ function GroupedInstanceList({
           colorClass="text-status-idle"
           borderClass="border-l-status-idle"
           instances={waiting}
+        />
+      )}
+      {stale.length > 0 && (
+        <InstanceSection
+          label="Stale"
+          icon={<Moon className="h-3 w-3 opacity-50" aria-hidden="true" />}
+          colorClass="text-text-tertiary"
+          borderClass="border-l-border"
+          instances={stale}
         />
       )}
     </div>
@@ -400,6 +413,12 @@ function UsageSection({
         ))}
       </div>
 
+      {/* Weekly token progress bar */}
+      <WeeklyTokenBar
+        weeklyTokens={usage.weeklyTokens}
+        weeklyTokenTarget={usage.weeklyTokenTarget}
+      />
+
       {/* Per-model breakdown */}
       {showModelBreakdown && usage.modelUsage.length > 0 && (
         <div className="mt-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
@@ -433,6 +452,45 @@ function UsageSection({
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+function WeeklyTokenBar({
+  weeklyTokens,
+  weeklyTokenTarget
+}: {
+  weeklyTokens: number
+  weeklyTokenTarget: number
+}) {
+  if (!weeklyTokenTarget) return null
+
+  const percent = Math.min(100, (weeklyTokens / weeklyTokenTarget) * 100)
+  const barColor =
+    percent >= 80 ? 'bg-red-400' : percent >= 60 ? 'bg-amber-400' : 'bg-status-active'
+  const textColor =
+    percent >= 80 ? 'text-red-400' : percent >= 60 ? 'text-amber-400' : 'text-status-active'
+
+  return (
+    <div className="mt-3">
+      <div className="mb-1 flex items-center justify-between text-[11px]">
+        <span className="text-text-tertiary">Weekly tokens</span>
+        <span className={cn('tabular-nums', textColor)}>
+          {formatCompactNumber(weeklyTokens)} / {formatCompactNumber(weeklyTokenTarget)} (
+          {Math.round(percent)}%)
+        </span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
+        <div
+          className={cn('h-full rounded-full transition-all duration-500', barColor)}
+          style={{ width: `${percent}%` }}
+          role="progressbar"
+          aria-valuenow={Math.round(percent)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Weekly token usage"
+        />
+      </div>
     </div>
   )
 }
