@@ -2,6 +2,9 @@ import { ipcMain, BrowserWindow, app } from 'electron'
 import { execFile } from 'child_process'
 import type { SessionTracker } from './session-tracker'
 import type { SettingsStore } from './store'
+import type { AutoUpdaterManager } from './auto-updater'
+import type { UsageStatsReader } from './usage-stats'
+import type { PromoChecker } from './promo-checker'
 import type { AppSettings } from '../renderer/lib/types'
 
 export function validateSettings(data: Partial<AppSettings>): Partial<AppSettings> {
@@ -23,11 +26,14 @@ export function validateSettings(data: Partial<AppSettings>): Partial<AppSetting
 interface IpcHandlerOptions {
   tracker: SessionTracker
   store: SettingsStore
+  updater?: AutoUpdaterManager
+  usageReader?: UsageStatsReader
+  promoChecker?: PromoChecker
   onOpenDashboard: () => void
 }
 
 export function setupIpcHandlers(options: IpcHandlerOptions): void {
-  const { tracker, store, onOpenDashboard } = options
+  const { tracker, store, updater, usageReader, promoChecker, onOpenDashboard } = options
 
   ipcMain.handle('instances:get', () => {
     return {
@@ -65,6 +71,30 @@ export function setupIpcHandlers(options: IpcHandlerOptions): void {
 
   ipcMain.handle('app:quit', () => {
     app.quit()
+  })
+
+  ipcMain.handle('updater:check', () => {
+    updater?.checkForUpdates()
+  })
+
+  ipcMain.handle('updater:download', () => {
+    updater?.downloadUpdate()
+  })
+
+  ipcMain.handle('updater:install', () => {
+    updater?.quitAndInstall()
+  })
+
+  ipcMain.handle('usage:get', () => {
+    return usageReader?.getLastData() ?? null
+  })
+
+  ipcMain.handle('usage:refresh', async () => {
+    return usageReader?.read() ?? null
+  })
+
+  ipcMain.handle('promo:get', () => {
+    return promoChecker?.getLastData() ?? null
   })
 
   ipcMain.handle('terminal:open', (_event: Electron.IpcMainInvokeEvent, _projectPath: string) => {

@@ -20,6 +20,8 @@ vi.mock('electron', () => ({
 import { setupIpcHandlers, forwardUpdatesToRenderer } from './ipc-handlers'
 import type { SessionTracker } from './session-tracker'
 import type { SettingsStore } from './store'
+import type { UsageStatsReader } from './usage-stats'
+import type { PromoChecker } from './promo-checker'
 
 function makeTracker(overrides: Partial<SessionTracker> = {}): SessionTracker {
   return {
@@ -42,9 +44,37 @@ function makeStore(overrides: Partial<SettingsStore> = {}): SettingsStore {
   } as unknown as SettingsStore
 }
 
+function makeUsageReader(overrides = {}): UsageStatsReader {
+  return {
+    getLastData: vi.fn().mockReturnValue({
+      totalInputTokens: 1000,
+      totalCostUSD: 5.5,
+      dataAvailable: true
+    }),
+    read: vi.fn().mockResolvedValue({
+      totalInputTokens: 2000,
+      totalCostUSD: 10.0,
+      dataAvailable: true
+    }),
+    ...overrides
+  } as unknown as UsageStatsReader
+}
+
+function makePromoChecker(overrides = {}): PromoChecker {
+  return {
+    getLastData: vi.fn().mockReturnValue({
+      is2x: true,
+      promoActive: true
+    }),
+    ...overrides
+  } as unknown as PromoChecker
+}
+
 describe('setupIpcHandlers', () => {
   let tracker: ReturnType<typeof makeTracker>
   let store: ReturnType<typeof makeStore>
+  let usageReader: ReturnType<typeof makeUsageReader>
+  let promoChecker: ReturnType<typeof makePromoChecker>
   let onOpenDashboard: ReturnType<typeof vi.fn>
   let handlers: Record<string, (...args: unknown[]) => unknown>
 
@@ -57,8 +87,10 @@ describe('setupIpcHandlers', () => {
 
     tracker = makeTracker()
     store = makeStore()
+    usageReader = makeUsageReader()
+    promoChecker = makePromoChecker()
     onOpenDashboard = vi.fn()
-    setupIpcHandlers({ tracker, store, onOpenDashboard })
+    setupIpcHandlers({ tracker, store, usageReader, promoChecker, onOpenDashboard })
   })
 
   describe('handler registration', () => {
@@ -71,6 +103,12 @@ describe('setupIpcHandlers', () => {
         'history:clear',
         'app:open-dashboard',
         'app:quit',
+        'updater:check',
+        'updater:download',
+        'updater:install',
+        'usage:get',
+        'usage:refresh',
+        'promo:get',
         'terminal:open'
       ]
 
@@ -150,6 +188,37 @@ describe('setupIpcHandlers', () => {
       handlers['app:quit']()
 
       expect(mockQuit).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe('usage:get', () => {
+    it('should return last usage data from reader', () => {
+      const result = handlers['usage:get']()
+
+      expect(usageReader.getLastData).toHaveBeenCalledOnce()
+      expect(result).toEqual(
+        expect.objectContaining({ totalInputTokens: 1000, dataAvailable: true })
+      )
+    })
+  })
+
+  describe('usage:refresh', () => {
+    it('should call reader.read and return result', async () => {
+      const result = await handlers['usage:refresh']()
+
+      expect(usageReader.read).toHaveBeenCalledOnce()
+      expect(result).toEqual(
+        expect.objectContaining({ totalInputTokens: 2000, dataAvailable: true })
+      )
+    })
+  })
+
+  describe('promo:get', () => {
+    it('should return last promo data from checker', () => {
+      const result = handlers['promo:get']()
+
+      expect(promoChecker.getLastData).toHaveBeenCalledOnce()
+      expect(result).toEqual(expect.objectContaining({ is2x: true, promoActive: true }))
     })
   })
 })

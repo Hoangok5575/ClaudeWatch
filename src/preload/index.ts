@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AppSettings, InstanceUpdate, SessionHistoryEntry } from '../renderer/lib/types'
+import type {
+  AppSettings,
+  InstanceUpdate,
+  SessionHistoryEntry,
+  UpdaterStatusPayload,
+  UsageStats,
+  PromoStatus
+} from '../renderer/lib/types'
 
 const api = {
   getInstances: (): Promise<InstanceUpdate> => ipcRenderer.invoke('instances:get'),
@@ -26,6 +33,43 @@ const api = {
     ipcRenderer.on('instances:update', handler)
     return () => {
       ipcRenderer.removeListener('instances:update', handler)
+    }
+  },
+
+  checkForUpdates: (): Promise<void> => ipcRenderer.invoke('updater:check'),
+
+  downloadUpdate: (): Promise<void> => ipcRenderer.invoke('updater:download'),
+
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('updater:install'),
+
+  onUpdaterStatus: (callback: (payload: UpdaterStatusPayload) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: UpdaterStatusPayload): void =>
+      callback(payload)
+    ipcRenderer.on('updater:status', handler)
+    return () => {
+      ipcRenderer.removeListener('updater:status', handler)
+    }
+  },
+
+  getUsage: (): Promise<UsageStats | null> => ipcRenderer.invoke('usage:get'),
+
+  refreshUsage: (): Promise<UsageStats | null> => ipcRenderer.invoke('usage:refresh'),
+
+  onUsageUpdate: (callback: (data: UsageStats) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: UsageStats): void => callback(data)
+    ipcRenderer.on('usage:update', handler)
+    return () => {
+      ipcRenderer.removeListener('usage:update', handler)
+    }
+  },
+
+  getPromoStatus: (): Promise<PromoStatus | null> => ipcRenderer.invoke('promo:get'),
+
+  onPromoUpdate: (callback: (data: PromoStatus) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: PromoStatus): void => callback(data)
+    ipcRenderer.on('promo:update', handler)
+    return () => {
+      ipcRenderer.removeListener('promo:update', handler)
     }
   }
 }
