@@ -1,0 +1,20 @@
+import { useState } from 'react'
+import { Header, type ViewType } from './components/Header'
+import { Dashboard } from './components/Dashboard'
+import { SessionHistory } from './components/SessionHistory'
+import { Settings } from './components/Settings'
+
+export default function App() {
+  const [currentView, setCurrentView] = useState<ViewType>('dashboard')
+
+  return (
+    <div className="flex h-screen flex-col overflow-hidden">
+      <Header currentView={currentView} onViewChange={setCurrentView} />
+      <main className="min-h-0 flex-1">
+        {currentView === 'dashboard' && <Dashboard />}
+        {currentView === 'history' && <SessionHistory />}
+        {currentView === 'settings' && <Settings />}
+      </main>
+    </div>
+  )
+}

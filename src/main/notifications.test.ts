@@ -1,0 +1,188 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { AppSettings, ClaudeInstance, SessionHistoryEntry } from '../renderer/lib/types'
+import { DEFAULT_SETTINGS } from '../renderer/lib/types'
+
+// Use vi.hoisted so mocks are available in the factory
+const { mockShow, MockNotification } = vi.hoisted(() => {
+  const mockShow = vi.fn()
+  const MockNotification = vi.fn().mockImplementation(() => ({
+    show: mockShow,
+    on: vi.fn(),
+    close: vi.fn()
+  }))
+  return { mockShow, MockNotification }
+})
+
+vi.mock('electron', () => ({
+  Notification: MockNotification
+}))
+
+import { NotificationManager } from './notifications'
+
+function makeInstance(overrides: Partial<ClaudeInstance> = {}): ClaudeInstance {
+  return {
+    pid: 1234,
+    tty: '/dev/ttys001',
+    status: 'idle',
+    cpuPercent: 0.1,
+    memPercent: 2.5,
+    elapsedTime: '00:05:32',
+    elapsedSeconds: 332,
+    projectPath: '/Users/test/my-project',
+    projectName: 'my-project',
+    flags: [],
+    startedAt: new Date('2026-01-01T10:00:00'),
+    ...overrides
+  }
+}
+
+function makeHistoryEntry(overrides: Partial<SessionHistoryEntry> = {}): SessionHistoryEntry {
+  return {
+    pid: 1234,
+    projectPath: '/Users/test/my-project',
+    projectName: 'my-project',
+    status: 'exited',
+    startedAt: new Date('2026-01-01T10:00:00'),
+    endedAt: new Date('2026-01-01T10:05:32'),
+    durationSeconds: 332,
+    flags: [],
+    ...overrides
+  }
+}
+
+describe('NotificationManager', () => {
+  let settings: AppSettings
+  let manager: NotificationManager
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+    manager = new NotificationManager(() => settings)
+  })
+
+  describe('notifyIdle', () => {
+    it('should show notification when onIdle is enabled', () => {
+      settings.notifications.onIdle = true
+      settings.notifications.doNotDisturb = false
+
+      manager.notifyIdle(makeInstance({ projectName: 'cool-app', elapsedTime: '00:10:00' }))
+
+      expect(MockNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Claude finished',
+          body: expect.stringContaining('cool-app')
+        })
+      )
+      expect(mockShow).toHaveBeenCalled()
+    })
+
+    it('should include elapsed time in notification body', () => {
+      settings.notifications.onIdle = true
+      settings.notifications.doNotDisturb = false
+
+      manager.notifyIdle(makeInstance({ elapsedTime: '01:23:45' }))
+
+      expect(MockNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.stringContaining('01:23:45')
+        })
+      )
+    })
+
+    it('should NOT show notification when onIdle is disabled', () => {
+      settings.notifications.onIdle = false
+      manager.notifyIdle(makeInstance())
+      expect(MockNotification).not.toHaveBeenCalled()
+      expect(mockShow).not.toHaveBeenCalled()
+    })
+
+    it('should NOT show notification when doNotDisturb is enabled', () => {
+      settings.notifications.onIdle = true
+      settings.notifications.doNotDisturb = true
+      manager.notifyIdle(makeInstance())
+      expect(MockNotification).not.toHaveBeenCalled()
+      expect(mockShow).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('notifyExited', () => {
+    it('should show notification when onExited is enabled', () => {
+      settings.notifications.onExited = true
+      settings.notifications.doNotDisturb = false
+
+      manager.notifyExited(makeHistoryEntry({ projectName: 'my-api', durationSeconds: 600 }))
+
+      expect(MockNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Claude session ended',
+          body: expect.stringContaining('my-api')
+        })
+      )
+      expect(mockShow).toHaveBeenCalled()
+    })
+
+    it('should include formatted duration in notification body', () => {
+      settings.notifications.onExited = true
+      settings.notifications.doNotDisturb = false
+
+      manager.notifyExited(makeHistoryEntry({ durationSeconds: 3661 }))
+
+      expect(MockNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.stringMatching(/1h\s+1m/)
+        })
+      )
+    })
+
+    it('should NOT show notification when onExited is disabled', () => {
+      settings.notifications.onExited = false
+      manager.notifyExited(makeHistoryEntry())
+      expect(MockNotification).not.toHaveBeenCalled()
+    })
+
+    it('should NOT show notification when doNotDisturb is enabled', () => {
+      settings.notifications.onExited = true
+      settings.notifications.doNotDisturb = true
+      manager.notifyExited(makeHistoryEntry())
+      expect(MockNotification).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('settings reactivity', () => {
+    it('should respect settings changes between calls', () => {
+      settings.notifications.onIdle = true
+      settings.notifications.doNotDisturb = false
+      manager.notifyIdle(makeInstance())
+      expect(mockShow).toHaveBeenCalledTimes(1)
+
+      settings.notifications.onIdle = false
+      manager.notifyIdle(makeInstance())
+      expect(mockShow).toHaveBeenCalledTimes(1) // still 1
+    })
+  })
+
+  describe('formatDuration via notifyExited', () => {
+    beforeEach(() => {
+      settings.notifications.onExited = true
+      settings.notifications.doNotDisturb = false
+    })
+
+    it('should format seconds-only durations', () => {
+      manager.notifyExited(makeHistoryEntry({ durationSeconds: 45 }))
+      expect(MockNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.stringContaining('45s')
+        })
+      )
+    })
+
+    it('should format minute durations', () => {
+      manager.notifyExited(makeHistoryEntry({ durationSeconds: 125 }))
+      expect(MockNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.stringContaining('2m 5s')
+        })
+      )
+    })
+  })
+})

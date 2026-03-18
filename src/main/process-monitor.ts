@@ -1,0 +1,114 @@
+import type { ClaudeInstance } from '../renderer/lib/types'
+import { parseElapsedTime, getProjectName } from '../renderer/lib/utils'
+import type { PlatformDetector, RawProcessInfo } from './platform/darwin'
+import { DarwinDetector } from './platform/darwin'
+import { Win32Detector } from './platform/win32'
+
+const KNOWN_FLAGS = [
+  '--resume',
+  '--continue',
+  '--dangerously-skip-permissions',
+  '--allowedTools',
+  '--model',
+  '--permission-prompt-tool',
+  '--verbose',
+  '--max-turns',
+  '--system-prompt',
+  '--append-system-prompt',
+  '--mcp-config',
+  '--prefill',
+  '--output-format',
+  '--input-format',
+  '--print',
+  '--add-dir'
+]
+
+function parseFlags(command: string): string[] {
+  const flags: string[] = []
+  for (const flag of KNOWN_FLAGS) {
+    if (command.includes(flag)) {
+      flags.push(flag)
+    }
+  }
+  return flags
+}
+
+function parseSessionId(command: string): string | undefined {
+  const match = command.match(/--resume\s+(\S+)/)
+  return match ? match[1] : undefined
+}
+
+function determineStatus(
+  stat: string,
+  cpuPercent: number,
+  cpuIdleThreshold: number
+): 'active' | 'idle' {
+  // R stat (running) with CPU above threshold = active
+  if (stat.includes('R') && cpuPercent > cpuIdleThreshold) {
+    return 'active'
+  }
+  // S stat (sleeping) with low CPU = idle
+  if (cpuPercent <= cpuIdleThreshold) {
+    return 'idle'
+  }
+  // High CPU even in S state = active (happens during brief state transitions)
+  return 'active'
+}
+
+export function getPlatformDetector(): PlatformDetector {
+  if (process.platform === 'win32') {
+    return new Win32Detector()
+  }
+  return new DarwinDetector()
+}
+
+export class ProcessMonitor {
+  private detector: PlatformDetector
+  private cpuIdleThreshold: number
+
+  constructor(options?: { cpuIdleThreshold?: number; detector?: PlatformDetector }) {
+    this.cpuIdleThreshold = options?.cpuIdleThreshold ?? 1.0
+    this.detector = options?.detector ?? getPlatformDetector()
+  }
+
+  async poll(): Promise<ClaudeInstance[]> {
+    let rawProcesses: RawProcessInfo[]
+    try {
+      rawProcesses = await this.detector.getClaudeProcesses()
+    } catch {
+      return []
+    }
+
+    if (rawProcesses.length === 0) {
+      return []
+    }
+
+    const instances: ClaudeInstance[] = []
+
+    for (const proc of rawProcesses) {
+      const projectPath = await this.detector.getWorkingDirectory(proc.pid)
+      const projectName = projectPath ? getProjectName(projectPath) : ''
+      const flags = parseFlags(proc.command)
+      const sessionId = parseSessionId(proc.command)
+      const status = determineStatus(proc.stat, proc.cpuPercent, this.cpuIdleThreshold)
+      const elapsedSeconds = parseElapsedTime(proc.elapsedTime)
+
+      instances.push({
+        pid: proc.pid,
+        tty: proc.tty,
+        status,
+        cpuPercent: proc.cpuPercent,
+        memPercent: proc.memPercent,
+        elapsedTime: proc.elapsedTime,
+        elapsedSeconds,
+        projectPath,
+        projectName,
+        flags,
+        sessionId,
+        startedAt: new Date(Date.now() - elapsedSeconds * 1000)
+      })
+    }
+
+    return instances
+  }
+}

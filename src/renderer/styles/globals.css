@@ -10,8 +10,8 @@
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI',
-      sans-serif;
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', sans-serif;
     overflow: hidden;
     user-select: none;
     -webkit-app-region: drag;

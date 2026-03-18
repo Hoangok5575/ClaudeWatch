@@ -1,0 +1,306 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ProcessMonitor } from './process-monitor'
+
+// We mock child_process used by platform detectors
+vi.mock('child_process', () => ({
+  execFile: vi.fn()
+}))
+
+import { execFile } from 'child_process'
+
+const mockExecFile = vi.mocked(execFile)
+
+// ─── Darwin ps output samples ───
+const PS_HEADER = '  PID STAT %CPU %MEM     ELAPSED TT       COMMAND'
+
+const PS_LINE_ACTIVE =
+  '12345 R+    45.2  1.3       02:30 ttys001  /usr/local/bin/claude --resume abc123 --dangerously-skip-permissions'
+
+const PS_LINE_IDLE =
+  '67890 S     0.1  0.8       10:15 ttys002  /Users/angelo/.claude/local/claude --continue'
+
+const PS_LINE_GUI =
+  '11111 S     2.0  3.0       01:00 ??       /Applications/Claude.app/Contents/MacOS/Claude'
+
+const PS_LINE_GREP = '99999 S     0.0  0.0       00:01 ttys003  grep claude'
+
+const LSOF_OUTPUT_12345 = 'p12345\nn/Users/angelo/Desktop/Work/ZKidz/MacClaudeTracker\n'
+const LSOF_OUTPUT_67890 = 'p67890\nn/Users/angelo/projects/my-app\n'
+
+describe('ProcessMonitor', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('poll() on darwin', () => {
+    it('should detect active Claude processes from ps output', async () => {
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          // ps call
+          ;(cb as Function)(null, `${PS_HEADER}\n${PS_LINE_ACTIVE}\n`, '')
+        } else {
+          // lsof call for PID 12345
+          ;(cb as Function)(null, LSOF_OUTPUT_12345, '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor({ cpuIdleThreshold: 1.0 })
+      const instances = await monitor.poll()
+
+      expect(instances).toHaveLength(1)
+      expect(instances[0].pid).toBe(12345)
+      expect(instances[0].status).toBe('active')
+      expect(instances[0].cpuPercent).toBeCloseTo(45.2)
+      expect(instances[0].memPercent).toBeCloseTo(1.3)
+      expect(instances[0].projectPath).toBe('/Users/angelo/Desktop/Work/ZKidz/MacClaudeTracker')
+      expect(instances[0].flags).toContain('--resume')
+      expect(instances[0].flags).toContain('--dangerously-skip-permissions')
+      expect(instances[0].sessionId).toBe('abc123')
+    })
+
+    it('should detect idle Claude processes (low CPU + sleeping)', async () => {
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${PS_LINE_IDLE}\n`, '')
+        } else {
+          ;(cb as Function)(null, LSOF_OUTPUT_67890, '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor({ cpuIdleThreshold: 1.0 })
+      const instances = await monitor.poll()
+
+      expect(instances).toHaveLength(1)
+      expect(instances[0].pid).toBe(67890)
+      expect(instances[0].status).toBe('idle')
+      expect(instances[0].flags).toContain('--continue')
+      expect(instances[0].sessionId).toBeUndefined()
+    })
+
+    it('should exclude Claude.app GUI and grep processes', async () => {
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        ;(cb as Function)(null, `${PS_HEADER}\n${PS_LINE_GUI}\n${PS_LINE_GREP}\n`, '')
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor()
+      const instances = await monitor.poll()
+
+      expect(instances).toHaveLength(0)
+    })
+
+    it('should handle multiple Claude processes in one poll', async () => {
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${PS_LINE_ACTIVE}\n${PS_LINE_IDLE}\n`, '')
+        } else if (callCount === 2) {
+          ;(cb as Function)(null, LSOF_OUTPUT_12345, '')
+        } else {
+          ;(cb as Function)(null, LSOF_OUTPUT_67890, '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor({ cpuIdleThreshold: 1.0 })
+      const instances = await monitor.poll()
+
+      expect(instances).toHaveLength(2)
+      expect(instances.map((i) => i.pid).sort()).toEqual([12345, 67890])
+    })
+
+    it('should return empty array when no Claude processes found', async () => {
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        ;(cb as Function)(null, `${PS_HEADER}\n`, '')
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor()
+      const instances = await monitor.poll()
+
+      expect(instances).toEqual([])
+    })
+
+    it('should handle ps command failure gracefully', async () => {
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        ;(cb as Function)(new Error('ps failed'), '', 'ps failed')
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor()
+      const instances = await monitor.poll()
+
+      expect(instances).toEqual([])
+    })
+
+    it('should handle lsof failure gracefully by using empty project path', async () => {
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${PS_LINE_ACTIVE}\n`, '')
+        } else {
+          ;(cb as Function)(new Error('lsof failed'), '', 'lsof failed')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor()
+      const instances = await monitor.poll()
+
+      expect(instances).toHaveLength(1)
+      expect(instances[0].projectPath).toBe('')
+    })
+
+    it('should parse elapsed time correctly', async () => {
+      const psLineLong = '55555 R+    10.0  2.0    1:05:30 ttys004  /usr/local/bin/claude'
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${psLineLong}\n`, '')
+        } else {
+          ;(cb as Function)(null, 'p55555\nn/tmp/project\n', '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor()
+      const instances = await monitor.poll()
+
+      expect(instances).toHaveLength(1)
+      expect(instances[0].elapsedTime).toBe('1:05:30')
+      expect(instances[0].elapsedSeconds).toBe(3930)
+    })
+
+    it('should extract projectName from projectPath', async () => {
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${PS_LINE_ACTIVE}\n`, '')
+        } else {
+          ;(cb as Function)(
+            null,
+            'p12345\nn/Users/angelo/Desktop/Work/ZKidz/MacClaudeTracker\n',
+            ''
+          )
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor()
+      const instances = await monitor.poll()
+
+      expect(instances[0].projectName).toBe('ZKidz/MacClaudeTracker')
+    })
+  })
+
+  describe('status determination', () => {
+    it('should classify R stat with high CPU as active', async () => {
+      const psLine = '10000 R+    50.0  1.0       01:00 ttys001  /usr/local/bin/claude'
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${psLine}\n`, '')
+        } else {
+          ;(cb as Function)(null, 'p10000\nn/tmp\n', '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor({ cpuIdleThreshold: 1.0 })
+      const instances = await monitor.poll()
+      expect(instances[0].status).toBe('active')
+    })
+
+    it('should classify S stat with low CPU as idle', async () => {
+      const psLine = '10001 S     0.5  1.0       01:00 ttys001  /usr/local/bin/claude'
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${psLine}\n`, '')
+        } else {
+          ;(cb as Function)(null, 'p10001\nn/tmp\n', '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor({ cpuIdleThreshold: 1.0 })
+      const instances = await monitor.poll()
+      expect(instances[0].status).toBe('idle')
+    })
+
+    it('should use configurable cpuIdleThreshold', async () => {
+      const psLine = '10002 S     3.0  1.0       01:00 ttys001  /usr/local/bin/claude'
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${psLine}\n`, '')
+        } else {
+          ;(cb as Function)(null, 'p10002\nn/tmp\n', '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor({ cpuIdleThreshold: 5.0 })
+      const instances = await monitor.poll()
+      expect(instances[0].status).toBe('idle')
+    })
+  })
+
+  describe('flag parsing', () => {
+    it('should parse --resume with session ID', async () => {
+      const psLine =
+        '20000 R+    10.0  1.0       01:00 ttys001  /usr/local/bin/claude --resume session-xyz'
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${psLine}\n`, '')
+        } else {
+          ;(cb as Function)(null, 'p20000\nn/tmp\n', '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor()
+      const instances = await monitor.poll()
+      expect(instances[0].sessionId).toBe('session-xyz')
+      expect(instances[0].flags).toContain('--resume')
+    })
+
+    it('should parse --continue flag without session ID', async () => {
+      const psLine = '20001 S     0.1  1.0       01:00 ttys001  /usr/local/bin/claude --continue'
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${psLine}\n`, '')
+        } else {
+          ;(cb as Function)(null, 'p20001\nn/tmp\n', '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor()
+      const instances = await monitor.poll()
+      expect(instances[0].sessionId).toBeUndefined()
+      expect(instances[0].flags).toContain('--continue')
+    })
+
+    it('should handle no flags', async () => {
+      const psLine = '20002 S     0.1  1.0       01:00 ttys001  /usr/local/bin/claude'
+      let callCount = 0
+      mockExecFile.mockImplementation(((_bin: string, _args: unknown, cb: unknown) => {
+        callCount++
+        if (callCount === 1) {
+          ;(cb as Function)(null, `${PS_HEADER}\n${psLine}\n`, '')
+        } else {
+          ;(cb as Function)(null, 'p20002\nn/tmp\n', '')
+        }
+      }) as typeof execFile)
+
+      const monitor = new ProcessMonitor()
+      const instances = await monitor.poll()
+      expect(instances[0].flags).toEqual([])
+      expect(instances[0].sessionId).toBeUndefined()
+    })
+  })
+})
