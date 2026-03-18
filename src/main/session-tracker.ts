@@ -8,6 +8,7 @@ export class SessionTracker extends EventEmitter {
   private instances: Map<number, ClaudeInstance> = new Map()
   private history: SessionHistoryEntry[] = []
   private intervalId: ReturnType<typeof setInterval> | null = null
+  private polling = false
 
   constructor(monitor: ProcessMonitor, settings: { maxHistoryEntries: number }) {
     super()
@@ -59,11 +60,15 @@ export class SessionTracker extends EventEmitter {
   }
 
   private async doPoll(): Promise<void> {
+    if (this.polling) return
+    this.polling = true
+
     let currentProcesses: ClaudeInstance[]
     try {
       currentProcesses = await this.monitor.poll()
     } catch {
       // Silently skip this poll cycle on error
+      this.polling = false
       return
     }
 
@@ -129,6 +134,7 @@ export class SessionTracker extends EventEmitter {
       stats: this.getStats()
     }
     this.emit('update', update)
+    this.polling = false
   }
 
   private trimHistory(): void {

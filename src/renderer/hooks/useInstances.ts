@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { ClaudeInstance, InstanceUpdate } from '../lib/types'
 
-export type StatusFilter = 'all' | 'active' | 'idle' | 'exited' | 'finished'
+export type StatusFilter = 'all' | 'active' | 'idle' | 'exited'
 
 interface UseInstancesReturn {
   instances: ClaudeInstance[]

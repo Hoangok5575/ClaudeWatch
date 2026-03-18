@@ -27,7 +27,8 @@ function createWindow(): BrowserWindow {
     trafficLightPosition: { x: 15, y: 15 },
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      contextIsolation: true
     }
   })
 
@@ -97,13 +98,14 @@ app.whenReady().then(() => {
   })
 
   // Wire notification events
-  tracker.on('instance-status-changed', (instance) => {
-    if (instance.status === 'idle' || instance.status === 'finished') {
+  tracker.on('instance-status-changed', ({ instance, previousStatus }) => {
+    if (instance.status === 'idle') {
       notifications.notifyIdle(instance)
     }
   })
 
   tracker.on('instance-exited', (entry) => {
+    store.addHistoryEntry(entry)
     notifications.notifyExited(entry)
   })
 

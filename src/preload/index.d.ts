@@ -1,10 +1,10 @@
-import type { AppSettings, InstanceUpdate } from '../renderer/lib/types'
+import type { AppSettings, InstanceUpdate, SessionHistoryEntry } from '../renderer/lib/types'
 
 export interface ElectronAPI {
   getInstances: () => Promise<InstanceUpdate>
   getSettings: () => Promise<AppSettings>
   setSettings: (settings: Partial<AppSettings>) => Promise<AppSettings>
-  getHistory: () => Promise<unknown[]>
+  getHistory: () => Promise<SessionHistoryEntry[]>
   clearHistory: () => Promise<{ success: boolean }>
   openDashboard: () => Promise<{ success: boolean }>
   quit: () => Promise<void>

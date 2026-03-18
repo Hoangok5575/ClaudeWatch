@@ -10,14 +10,31 @@ export function formatElapsedTime(seconds: number): string {
 }
 
 export function parseElapsedTime(elapsed: string): number {
-  const parts = elapsed.trim().split(':').map(Number)
+  const trimmed = elapsed.trim()
+  if (!trimmed) return 0
+
+  // Handle D-HH:MM:SS format (macOS ps etime for >24h processes)
+  let days = 0
+  let timePart = trimmed
+  const dashIndex = trimmed.indexOf('-')
+  if (dashIndex !== -1) {
+    days = parseInt(trimmed.substring(0, dashIndex), 10)
+    if (isNaN(days)) return 0
+    timePart = trimmed.substring(dashIndex + 1)
+  }
+
+  const parts = timePart.split(':').map(Number)
+  if (parts.some(isNaN)) return 0
+
+  let seconds = days * 86400
   if (parts.length === 3) {
-    return parts[0] * 3600 + parts[1] * 60 + parts[2]
+    seconds += parts[0] * 3600 + parts[1] * 60 + parts[2]
+  } else if (parts.length === 2) {
+    seconds += parts[0] * 60 + parts[1]
+  } else {
+    seconds += parts[0] || 0
   }
-  if (parts.length === 2) {
-    return parts[0] * 60 + parts[1]
-  }
-  return parts[0] || 0
+  return seconds
 }
 
 export function getProjectName(projectPath: string): string {

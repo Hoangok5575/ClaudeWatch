@@ -68,9 +68,9 @@ export function SessionHistory() {
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col gap-2" role="list" aria-label="Session history entries">
-            {history.map((entry, index) => (
+            {history.map((entry) => (
               <div
-                key={`${entry.pid}-${index}`}
+                key={`${entry.pid}-${String(entry.startedAt)}`}
                 className="glass-card flex items-center gap-3 px-4 py-3"
                 role="listitem"
               >

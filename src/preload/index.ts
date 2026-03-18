@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AppSettings, InstanceUpdate } from '../renderer/lib/types'
+import type { AppSettings, InstanceUpdate, SessionHistoryEntry } from '../renderer/lib/types'
 
 const api = {
   getInstances: (): Promise<InstanceUpdate> => ipcRenderer.invoke('instances:get'),
@@ -9,7 +9,7 @@ const api = {
   setSettings: (settings: Partial<AppSettings>): Promise<AppSettings> =>
     ipcRenderer.invoke('settings:set', settings),
 
-  getHistory: (): Promise<unknown[]> => ipcRenderer.invoke('history:get'),
+  getHistory: (): Promise<SessionHistoryEntry[]> => ipcRenderer.invoke('history:get'),
 
   clearHistory: (): Promise<{ success: boolean }> => ipcRenderer.invoke('history:clear'),
 

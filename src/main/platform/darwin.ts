@@ -1,6 +1,6 @@
-import { execFile } from 'child_process'
 import type { ClaudeInstance } from '../../renderer/lib/types'
 import { parseElapsedTime, getProjectName } from '../../renderer/lib/utils'
+import { execFilePromise } from './exec'
 
 export interface RawProcessInfo {
   pid: number
@@ -15,18 +15,6 @@ export interface RawProcessInfo {
 export interface PlatformDetector {
   getClaudeProcesses(): Promise<RawProcessInfo[]>
   getWorkingDirectory(pid: number): Promise<string>
-}
-
-function execFilePromise(bin: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    execFile(bin, args, (err, stdout, stderr) => {
-      if (err) {
-        reject(err)
-        return
-      }
-      resolve({ stdout: stdout as string, stderr: stderr as string })
-    })
-  })
 }
 
 function isClaudeCLI(command: string): boolean {

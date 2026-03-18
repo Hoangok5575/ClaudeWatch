@@ -24,11 +24,6 @@ const statusConfig: Record<
     label: 'Exited',
     colorClass: 'text-status-exited',
     dotClass: 'bg-status-exited'
-  },
-  finished: {
-    label: 'Finished',
-    colorClass: 'text-status-finished',
-    dotClass: 'bg-status-finished'
   }
 }
 

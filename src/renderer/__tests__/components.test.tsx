@@ -39,11 +39,6 @@ describe('StatusBadge', () => {
     render(<StatusBadge status="exited" />)
     expect(screen.getByText('Exited')).toBeTruthy()
   })
-
-  it('renders finished status', () => {
-    render(<StatusBadge status="finished" />)
-    expect(screen.getByText('Finished')).toBeTruthy()
-  })
 })
 
 describe('ProjectTag', () => {

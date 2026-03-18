@@ -10,7 +10,6 @@ interface TrayManagerOptions {
 const STATUS_EMOJI: Record<ClaudeInstance['status'], string> = {
   active: '\uD83D\uDFE2',
   idle: '\uD83D\uDFE1',
-  finished: '\uD83D\uDFE1',
   exited: '\uD83D\uDD34'
 }
 

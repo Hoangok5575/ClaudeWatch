@@ -15,6 +15,11 @@ export function InstanceCard({ instance }: InstanceCardProps) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+
     setElapsed(instance.elapsedSeconds)
 
     if (instance.status === 'active' || instance.status === 'idle') {
@@ -24,9 +29,12 @@ export function InstanceCard({ instance }: InstanceCardProps) {
     }
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
     }
-  }, [instance.elapsedSeconds, instance.status])
+  }, [instance.elapsedSeconds, instance.status, instance.pid])
 
   return (
     <div className="glass-card-hover overflow-hidden">

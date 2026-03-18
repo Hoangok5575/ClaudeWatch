@@ -1,7 +1,7 @@
 export interface ClaudeInstance {
   pid: number
   tty: string
-  status: 'active' | 'idle' | 'finished' | 'exited'
+  status: 'active' | 'idle' | 'exited'
   cpuPercent: number
   memPercent: number
   elapsedTime: string
@@ -18,7 +18,7 @@ export interface SessionHistoryEntry {
   pid: number
   projectPath: string
   projectName: string
-  status: 'exited' | 'finished'
+  status: 'exited'
   startedAt: Date
   endedAt: Date
   durationSeconds: number

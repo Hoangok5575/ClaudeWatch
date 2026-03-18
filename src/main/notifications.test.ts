@@ -161,6 +161,50 @@ describe('NotificationManager', () => {
     })
   })
 
+  describe('notification sound setting', () => {
+    it('should pass silent: false when sound is enabled', () => {
+      settings.notifications.onIdle = true
+      settings.notifications.doNotDisturb = false
+      settings.notifications.sound = true
+
+      manager.notifyIdle(makeInstance())
+
+      expect(MockNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          silent: false
+        })
+      )
+    })
+
+    it('should pass silent: true when sound is disabled', () => {
+      settings.notifications.onIdle = true
+      settings.notifications.doNotDisturb = false
+      settings.notifications.sound = false
+
+      manager.notifyIdle(makeInstance())
+
+      expect(MockNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          silent: true
+        })
+      )
+    })
+
+    it('should pass silent option on exited notifications too', () => {
+      settings.notifications.onExited = true
+      settings.notifications.doNotDisturb = false
+      settings.notifications.sound = false
+
+      manager.notifyExited(makeHistoryEntry())
+
+      expect(MockNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          silent: true
+        })
+      )
+    })
+  })
+
   describe('formatDuration via notifyExited', () => {
     beforeEach(() => {
       settings.notifications.onExited = true

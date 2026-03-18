@@ -3,6 +3,22 @@ import type { SessionTracker } from './session-tracker'
 import type { SettingsStore } from './store'
 import type { AppSettings } from '../renderer/lib/types'
 
+export function validateSettings(data: Partial<AppSettings>): Partial<AppSettings> {
+  const validated = { ...data }
+
+  if (validated.pollingIntervalMs !== undefined) {
+    validated.pollingIntervalMs = Math.max(500, Math.min(60000, validated.pollingIntervalMs))
+  }
+  if (validated.cpuIdleThreshold !== undefined) {
+    validated.cpuIdleThreshold = Math.max(0.1, Math.min(100, validated.cpuIdleThreshold))
+  }
+  if (validated.maxHistoryEntries !== undefined) {
+    validated.maxHistoryEntries = Math.max(1, Math.min(10000, validated.maxHistoryEntries))
+  }
+
+  return validated
+}
+
 interface IpcHandlerOptions {
   tracker: SessionTracker
   store: SettingsStore
@@ -26,7 +42,8 @@ export function setupIpcHandlers(options: IpcHandlerOptions): void {
   ipcMain.handle(
     'settings:set',
     (_event: Electron.IpcMainInvokeEvent, data: Partial<AppSettings>) => {
-      store.setSettings(data)
+      const validated = validateSettings(data)
+      store.setSettings(validated)
       return store.getSettings()
     }
   )

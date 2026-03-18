@@ -1,17 +1,5 @@
-import { execFile } from 'child_process'
 import type { RawProcessInfo, PlatformDetector } from './darwin'
-
-function execFilePromise(bin: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    execFile(bin, args, (err, stdout, stderr) => {
-      if (err) {
-        reject(err)
-        return
-      }
-      resolve({ stdout: stdout as string, stderr: stderr as string })
-    })
-  })
-}
+import { execFilePromise } from './exec'
 
 export class Win32Detector implements PlatformDetector {
   async getClaudeProcesses(): Promise<RawProcessInfo[]> {
@@ -33,7 +21,7 @@ export class Win32Detector implements PlatformDetector {
         if (parts.length < 2) continue
 
         const pid = parseInt(parts[1], 10)
-        if (isNaN(pid)) continue
+        if (!Number.isInteger(pid) || pid <= 0) continue
 
         // Get additional process details via wmic
         try {
@@ -73,6 +61,7 @@ export class Win32Detector implements PlatformDetector {
   }
 
   async getWorkingDirectory(pid: number): Promise<string> {
+    if (!Number.isInteger(pid) || pid <= 0) return ''
     try {
       const { stdout } = await execFilePromise('wmic', [
         'process',
