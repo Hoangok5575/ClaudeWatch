@@ -10,8 +10,6 @@ WIDGET_DIR="$PROJECT_DIR/widget"
 BUILD_DIR="$PROJECT_DIR/widget-build"
 OUTPUT_DIR="$PROJECT_DIR/build/widget"
 
-# Parse optional arguments
-SIGN=${SIGN:-false}
 TEAM_ID=${TEAM_ID:-"7QZW432V8B"}
 
 echo "==> Building ClaudeWatch Widget Extension..."

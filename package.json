@@ -1,6 +1,6 @@
 {
   "name": "claudewatch",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Cross-platform Electron app to monitor Claude Code CLI instances",
   "main": "./out/main/index.js",
   "scripts": {
@@ -11,7 +11,6 @@
     "postinstall": "electron-builder install-app-deps",
     "build:widget": "bash scripts/build-widget.sh",
     "build:mac": "npm run build && npm run build:widget && electron-builder --mac",
-    "build:mac:signed": "npm run build && SIGN=true UNIVERSAL=true npm run build:widget && electron-builder --mac",
     "publish:mac": "npm run build:mac -- --publish always",
     "publish:mac:only": "electron-builder --mac --publish always --prepackaged dist/mac-universal/ClaudeWatch.app",
     "build:win": "npm run build && electron-builder --win",
@@ -21,9 +20,9 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "typecheck": "tsc --noEmit",
-    "release:patch": "npm version patch && git push --follow-tags",
-    "release:minor": "npm version minor && git push --follow-tags",
-    "release:major": "npm version major && git push --follow-tags"
+    "release:patch": "npm version patch --no-git-tag-version && npm run publish:mac",
+    "release:minor": "npm version minor --no-git-tag-version && npm run publish:mac",
+    "release:major": "npm version major --no-git-tag-version && npm run publish:mac"
   },
   "keywords": [
     "electron",
