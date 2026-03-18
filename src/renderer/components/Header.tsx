@@ -16,7 +16,14 @@ const navItems: { view: ViewType; label: string; icon: typeof LayoutDashboard }[
   { view: 'settings', label: 'Settings', icon: Settings }
 ]
 
-const emptyStats: InstanceUpdate['stats'] = { total: 0, active: 0, idle: 0, exited: 0 }
+const emptyStats: InstanceUpdate['stats'] = {
+  total: 0,
+  active: 0,
+  idle: 0,
+  stale: 0,
+  exited: 0,
+  recentlyCompleted: 0
+}
 
 export function Header({ currentView, onViewChange }: HeaderProps) {
   const [stats, setStats] = useState(emptyStats)

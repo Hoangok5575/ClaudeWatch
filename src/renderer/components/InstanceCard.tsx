@@ -21,7 +21,7 @@ export function InstanceCard({ instance }: InstanceCardProps) {
 
     setElapsed(instance.elapsedSeconds)
 
-    if (instance.status === 'active' || instance.status === 'idle') {
+    if (instance.status === 'active' || instance.status === 'idle' || instance.status === 'stale') {
       intervalRef.current = setInterval(() => {
         setElapsed((prev) => prev + 1)
       }, 1000)

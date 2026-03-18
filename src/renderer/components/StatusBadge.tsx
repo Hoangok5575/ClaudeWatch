@@ -21,6 +21,11 @@ const statusConfig: Record<
     colorClass: 'text-status-idle',
     dotClass: 'bg-status-idle'
   },
+  stale: {
+    label: 'Stale',
+    colorClass: 'text-text-tertiary',
+    dotClass: 'bg-text-tertiary'
+  },
   exited: {
     label: 'Exited',
     colorClass: 'text-status-exited',
