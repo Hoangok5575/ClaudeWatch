@@ -1,13 +1,13 @@
 import SwiftUI
 import WidgetKit
 
-/// Small widget: active count with pulsing dot + top project name
+/// Small widget: active count with pulsing dot + cost + 2x badge
 struct SmallWidgetView: View {
     let data: WidgetStatsPayload
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Active count with green dot
+            // Header: active count + 2x badge
             HStack(spacing: 6) {
                 Circle()
                     .fill(data.stats.active > 0 ? WidgetColors.statusActive : WidgetColors.textTertiary)
@@ -16,6 +16,18 @@ struct SmallWidgetView: View {
                 Text("\(data.stats.active)")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(WidgetColors.textPrimary)
+
+                Spacer()
+
+                if data.promo?.is2x == true {
+                    Text("2x")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(WidgetColors.statusActive)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(WidgetColors.statusActive.opacity(0.15))
+                        .clipShape(Capsule())
+                }
             }
 
             Text(data.stats.active == 1 ? "active" : "active")
@@ -24,14 +36,20 @@ struct SmallWidgetView: View {
 
             Spacer()
 
+            // Cost line
+            if let usage = data.usage, usage.dataAvailable {
+                Text(formatCurrency(usage.totalCostUSD))
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(WidgetColors.statusActive)
+                    .monospacedDigit()
+            }
+
             // Top active project name
             if let top = data.instances.first(where: { $0.isActive }) {
-                HStack(spacing: 4) {
-                    Text(top.projectName)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(WidgetColors.textTertiary)
-                        .lineLimit(1)
-                }
+                Text(top.projectName)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(WidgetColors.textTertiary)
+                    .lineLimit(1)
             } else if data.instances.isEmpty {
                 Text("No instances")
                     .font(.system(size: 11, weight: .medium))

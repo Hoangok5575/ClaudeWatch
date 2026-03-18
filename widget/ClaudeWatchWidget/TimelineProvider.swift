@@ -45,6 +45,8 @@ extension WidgetStatsPayload {
             InstanceData(pid: 3, projectName: "auth-service", status: "active", cpuPercent: 15.2, memPercent: 0.9, elapsedSeconds: 900),
             InstanceData(pid: 4, projectName: "data-pipeline", status: "idle", cpuPercent: 0.1, memPercent: 1.1, elapsedSeconds: 7200),
             InstanceData(pid: 5, projectName: "mobile-app", status: "idle", cpuPercent: 0.0, memPercent: 0.5, elapsedSeconds: 5400)
-        ]
+        ],
+        usage: UsageData(totalCostUSD: 425.94, totalInputTokens: 1_981_851, totalOutputTokens: 2_697_252, totalCacheReadTokens: 455_842_215, dataAvailable: true),
+        promo: PromoData(is2x: true, promoActive: true, expiresInSeconds: 6180, promoPeriod: "March 13–27, 2026")
     )
 }

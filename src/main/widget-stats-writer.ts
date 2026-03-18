@@ -1,7 +1,7 @@
-import { writeFile, mkdir, rename, access } from 'fs/promises'
+import { writeFile, mkdir, rename } from 'fs/promises'
 import { join } from 'path'
-import { homedir, tmpdir } from 'os'
-import type { ClaudeInstance, InstanceUpdate } from '../renderer/lib/types'
+import { homedir } from 'os'
+import type { ClaudeInstance, InstanceUpdate, UsageStats, PromoStatus } from '../renderer/lib/types'
 
 const APP_GROUP_ID = 'group.com.zkidzdev.claudewatch'
 
@@ -14,6 +14,21 @@ export interface WidgetInstanceData {
   elapsedSeconds: number
 }
 
+export interface WidgetUsageData {
+  totalCostUSD: number
+  totalInputTokens: number
+  totalOutputTokens: number
+  totalCacheReadTokens: number
+  dataAvailable: boolean
+}
+
+export interface WidgetPromoData {
+  is2x: boolean
+  promoActive: boolean
+  expiresInSeconds: number | null
+  promoPeriod: string
+}
+
 export interface WidgetStatsPayload {
   updatedAt: string
   stats: {
@@ -23,6 +38,8 @@ export interface WidgetStatsPayload {
     exited: number
   }
   instances: WidgetInstanceData[]
+  usage: WidgetUsageData | null
+  promo: WidgetPromoData | null
 }
 
 export class WidgetStatsWriter {
@@ -53,8 +70,32 @@ export class WidgetStatsWriter {
     }
   }
 
-  async write(instances: ClaudeInstance[], stats: InstanceUpdate['stats']): Promise<void> {
+  async write(
+    instances: ClaudeInstance[],
+    stats: InstanceUpdate['stats'],
+    usageStats?: UsageStats | null,
+    promoStatus?: PromoStatus | null
+  ): Promise<void> {
     await this.ensureContainer()
+
+    const usage: WidgetUsageData | null = usageStats?.dataAvailable
+      ? {
+          totalCostUSD: usageStats.totalCostUSD,
+          totalInputTokens: usageStats.totalInputTokens,
+          totalOutputTokens: usageStats.totalOutputTokens,
+          totalCacheReadTokens: usageStats.totalCacheReadTokens,
+          dataAvailable: true
+        }
+      : null
+
+    const promo: WidgetPromoData | null = promoStatus?.promoActive
+      ? {
+          is2x: promoStatus.is2x,
+          promoActive: promoStatus.promoActive,
+          expiresInSeconds: promoStatus.expiresInSeconds,
+          promoPeriod: promoStatus.promoPeriod
+        }
+      : null
 
     const payload: WidgetStatsPayload = {
       updatedAt: new Date().toISOString(),
@@ -79,11 +120,13 @@ export class WidgetStatsWriter {
           cpuPercent: i.cpuPercent,
           memPercent: i.memPercent,
           elapsedSeconds: i.elapsedSeconds
-        }))
+        })),
+      usage,
+      promo
     }
 
-    // Atomic write: write to temp file, then rename
-    const tmpPath = join(tmpdir(), `claudewatch-stats-${process.pid}.json`)
+    // Atomic write: temp file in same directory to avoid cross-filesystem rename failures
+    const tmpPath = join(this.containerPath, `.stats-${process.pid}.tmp`)
     await writeFile(tmpPath, JSON.stringify(payload, null, 2), 'utf-8')
     await rename(tmpPath, this.statsPath)
   }

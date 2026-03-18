@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-/// Large widget: full stats bar + instance list with CPU/MEM metrics
+/// Large widget: promo bar + stats + usage cards + instance list
 struct LargeWidgetView: View {
     let data: WidgetStatsPayload
 
@@ -12,6 +12,16 @@ struct LargeWidgetView: View {
                 Text("ClaudeWatch")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(WidgetColors.textPrimary)
+
+                if data.promo?.is2x == true {
+                    Text("2x")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(WidgetColors.statusActive)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(WidgetColors.statusActive.opacity(0.15))
+                        .clipShape(Capsule())
+                }
 
                 Spacer()
 
@@ -29,7 +39,14 @@ struct LargeWidgetView: View {
             .padding(.top, 14)
             .padding(.bottom, 10)
 
-            // Stats cards row
+            // Promo banner
+            if let promo = data.promo, promo.promoActive {
+                PromoBannerView(promo: promo)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            }
+
+            // Instance stats row
             HStack(spacing: 8) {
                 StatCard(
                     label: "Active",
@@ -48,7 +65,18 @@ struct LargeWidgetView: View {
                 )
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 10)
+            .padding(.bottom, 6)
+
+            // Usage stats row
+            if let usage = data.usage, usage.dataAvailable {
+                HStack(spacing: 8) {
+                    UsageStatCard(label: "Cost", value: formatCurrency(usage.totalCostUSD), color: WidgetColors.statusActive)
+                    UsageStatCard(label: "Input", value: formatCompactNumber(usage.totalInputTokens), color: Color(red: 34/255, green: 211/255, blue: 238/255)) // cyan
+                    UsageStatCard(label: "Output", value: formatCompactNumber(usage.totalOutputTokens), color: Color(red: 192/255, green: 132/255, blue: 252/255)) // purple
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+            }
 
             // Separator
             Rectangle()
@@ -69,9 +97,9 @@ struct LargeWidgetView: View {
                 .frame(maxWidth: .infinity)
                 Spacer()
             } else {
-                // Instance list (max 8)
+                // Instance list (max 6 to make room for usage cards)
                 VStack(spacing: 0) {
-                    ForEach(Array(data.instances.prefix(8))) { instance in
+                    ForEach(Array(data.instances.prefix(6))) { instance in
                         InstanceRow(instance: instance, showMetrics: true)
                     }
                 }
@@ -81,8 +109,8 @@ struct LargeWidgetView: View {
 
                 // Footer with overflow count and update time
                 HStack {
-                    if data.instances.count > 8 {
-                        Text("+\(data.instances.count - 8) more")
+                    if data.instances.count > 6 {
+                        Text("+\(data.instances.count - 6) more")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(WidgetColors.textTertiary)
                     }
@@ -130,6 +158,79 @@ struct StatCard: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .background(WidgetColors.surfaceRaised)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+/// A compact usage stat card showing a value + label
+struct UsageStatCard: View {
+    let label: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(color)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(WidgetColors.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .background(WidgetColors.surfaceRaised)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+/// Promo banner for the large widget
+struct PromoBannerView: View {
+    let promo: WidgetStatsPayload.PromoData
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if promo.is2x {
+                Circle()
+                    .fill(WidgetColors.statusActive)
+                    .frame(width: 6, height: 6)
+
+                Text("2x ACTIVE")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(WidgetColors.statusActive)
+
+                if let expires = promo.expiresInSeconds {
+                    Text("· \(formatCountdown(expires))")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(WidgetColors.textSecondary)
+                }
+            } else {
+                Circle()
+                    .fill(WidgetColors.textTertiary)
+                    .frame(width: 6, height: 6)
+
+                Text("1x Standard")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(WidgetColors.textSecondary)
+            }
+
+            Spacer()
+
+            Text(promo.promoPeriod)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(WidgetColors.textTertiary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            promo.is2x
+                ? WidgetColors.statusActive.opacity(0.1)
+                : WidgetColors.surfaceRaised
+        )
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }

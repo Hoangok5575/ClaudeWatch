@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-/// Medium widget: stats bar + 3 instance rows
+/// Medium widget: stats bar + usage bar + 3 instance rows
 struct MediumWidgetView: View {
     let data: WidgetStatsPayload
 
@@ -11,7 +11,19 @@ struct MediumWidgetView: View {
             HStack(spacing: 12) {
                 StatPill(color: WidgetColors.statusActive, count: data.stats.active, label: "active")
                 StatPill(color: WidgetColors.statusIdle, count: data.stats.idle, label: "idle")
+
                 Spacer()
+
+                if data.promo?.is2x == true {
+                    Text("2x")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(WidgetColors.statusActive)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(WidgetColors.statusActive.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+
                 Text("ClaudeWatch")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(WidgetColors.textTertiary)
@@ -19,6 +31,25 @@ struct MediumWidgetView: View {
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 8)
+
+            // Usage bar
+            if let usage = data.usage, usage.dataAvailable {
+                HStack(spacing: 8) {
+                    Text(formatCurrency(usage.totalCostUSD))
+                        .foregroundStyle(WidgetColors.statusActive)
+                    Text("·")
+                        .foregroundStyle(WidgetColors.textTertiary)
+                    Text("\(formatCompactNumber(usage.totalInputTokens)) in")
+                        .foregroundStyle(WidgetColors.textSecondary)
+                    Text("·")
+                        .foregroundStyle(WidgetColors.textTertiary)
+                    Text("\(formatCompactNumber(usage.totalOutputTokens)) out")
+                        .foregroundStyle(WidgetColors.textSecondary)
+                }
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .padding(.horizontal, 16)
+                .padding(.bottom, 6)
+            }
 
             // Separator
             Rectangle()
