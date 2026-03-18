@@ -1,7 +1,7 @@
 export interface ClaudeInstance {
   pid: number
   tty: string
-  status: 'active' | 'idle' | 'exited'
+  status: 'active' | 'idle' | 'stale' | 'exited'
   cpuPercent: number
   memPercent: number
   elapsedTime: string
@@ -13,6 +13,7 @@ export interface ClaudeInstance {
   startedAt: Date
   lastStatusChange?: Date
   lastBecameIdleAt?: Date
+  lastActiveAt?: Date
 }
 
 export interface SessionHistoryEntry {
@@ -30,6 +31,7 @@ export interface AppSettings {
   pollingIntervalMs: number
   cpuIdleThreshold: number
   launchAtLogin: boolean
+  minimizeToTray: boolean
   notifications: {
     onTaskComplete: boolean
     onIdle: boolean
@@ -41,12 +43,15 @@ export interface AppSettings {
   }
   theme: 'dark' | 'light' | 'system'
   maxHistoryEntries: number
+  weeklyTokenTarget: number
+  staleThresholdMinutes: number
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   pollingIntervalMs: 3000,
   cpuIdleThreshold: 1.0,
   launchAtLogin: false,
+  minimizeToTray: true,
   notifications: {
     onTaskComplete: true,
     onIdle: true,
@@ -57,7 +62,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
     doNotDisturb: false
   },
   theme: 'dark',
-  maxHistoryEntries: 100
+  maxHistoryEntries: 100,
+  weeklyTokenTarget: 5_000_000,
+  staleThresholdMinutes: 30
 }
 
 export interface InstanceUpdate {
@@ -66,6 +73,7 @@ export interface InstanceUpdate {
     total: number
     active: number
     idle: number
+    stale: number
     exited: number
     recentlyCompleted: number
   }
@@ -106,6 +114,8 @@ export interface UsageStats {
   modelUsage: ModelUsageEntry[]
   dataAvailable: boolean
   lastUpdated: string | null
+  weeklyTokens: number
+  weeklyTokenTarget: number
 }
 
 export interface ModelUsageEntry {
