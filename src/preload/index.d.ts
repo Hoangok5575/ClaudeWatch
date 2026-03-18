@@ -1,4 +1,11 @@
-import type { AppSettings, InstanceUpdate, SessionHistoryEntry } from '../renderer/lib/types'
+import type {
+  AppSettings,
+  InstanceUpdate,
+  SessionHistoryEntry,
+  UpdaterStatusPayload,
+  UsageStats,
+  PromoStatus
+} from '../renderer/lib/types'
 
 export interface ElectronAPI {
   getInstances: () => Promise<InstanceUpdate>
@@ -10,6 +17,15 @@ export interface ElectronAPI {
   quit: () => Promise<void>
   openTerminal: (path: string) => Promise<{ success: boolean }>
   onInstancesUpdate: (callback: (data: InstanceUpdate) => void) => () => void
+  checkForUpdates: () => Promise<void>
+  downloadUpdate: () => Promise<void>
+  installUpdate: () => Promise<void>
+  onUpdaterStatus: (callback: (payload: UpdaterStatusPayload) => void) => () => void
+  getUsage: () => Promise<UsageStats | null>
+  refreshUsage: () => Promise<UsageStats | null>
+  onUsageUpdate: (callback: (data: UsageStats) => void) => () => void
+  getPromoStatus: () => Promise<PromoStatus | null>
+  onPromoUpdate: (callback: (data: PromoStatus) => void) => () => void
 }
 
 declare global {

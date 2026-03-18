@@ -12,6 +12,7 @@ export interface ClaudeInstance {
   sessionId?: string
   startedAt: Date
   lastStatusChange?: Date
+  lastBecameIdleAt?: Date
 }
 
 export interface SessionHistoryEntry {
@@ -30,10 +31,12 @@ export interface AppSettings {
   cpuIdleThreshold: number
   launchAtLogin: boolean
   notifications: {
+    onTaskComplete: boolean
     onIdle: boolean
     onExited: boolean
     onError: boolean
     sound: boolean
+    pingSound: boolean
     doNotDisturb: boolean
   }
   theme: 'dark' | 'light' | 'system'
@@ -45,10 +48,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   cpuIdleThreshold: 1.0,
   launchAtLogin: false,
   notifications: {
+    onTaskComplete: true,
     onIdle: true,
     onExited: true,
     onError: true,
     sound: true,
+    pingSound: true,
     doNotDisturb: false
   },
   theme: 'dark',
@@ -62,7 +67,65 @@ export interface InstanceUpdate {
     active: number
     idle: number
     exited: number
+    recentlyCompleted: number
   }
+}
+
+export type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error'
+
+export interface UpdateInfo {
+  version: string
+  releaseNotes?: string
+}
+
+export interface UpdateProgress {
+  percent: number
+  bytesPerSecond: number
+  transferred: number
+  total: number
+}
+
+export interface UpdaterStatusPayload {
+  status: UpdateStatus
+  data?: UpdateInfo | UpdateProgress | string
+}
+
+export interface UsageStats {
+  totalInputTokens: number
+  totalOutputTokens: number
+  totalCacheReadTokens: number
+  totalCacheCreationTokens: number
+  totalCostUSD: number
+  modelUsage: ModelUsageEntry[]
+  dataAvailable: boolean
+  lastUpdated: string | null
+}
+
+export interface ModelUsageEntry {
+  model: string
+  inputTokens: number
+  outputTokens: number
+  cacheReadInputTokens: number
+  cacheCreationInputTokens: number
+  costUSD: number
+}
+
+export interface PromoStatus {
+  is2x: boolean
+  promoActive: boolean
+  isWeekend: boolean
+  currentWindowEnd: string | null
+  nextWindowStart: string | null
+  expiresInSeconds: number | null
+  promoPeriod: string
+  peakHoursLocal: string
 }
 
 export type IpcChannels =
@@ -75,3 +138,12 @@ export type IpcChannels =
   | 'app:open-dashboard'
   | 'app:quit'
   | 'terminal:open'
+  | 'updater:check'
+  | 'updater:download'
+  | 'updater:install'
+  | 'updater:status'
+  | 'usage:get'
+  | 'usage:refresh'
+  | 'usage:update'
+  | 'promo:get'
+  | 'promo:update'

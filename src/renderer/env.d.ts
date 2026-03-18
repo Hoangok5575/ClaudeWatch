@@ -10,6 +10,17 @@ interface ElectronAPI {
   quit: () => Promise<void>
   openTerminal: (path: string) => Promise<{ success: boolean }>
   onInstancesUpdate: (callback: (data: import('./lib/types').InstanceUpdate) => void) => () => void
+  checkForUpdates: () => Promise<void>
+  downloadUpdate: () => Promise<void>
+  installUpdate: () => Promise<void>
+  onUpdaterStatus: (
+    callback: (payload: import('./lib/types').UpdaterStatusPayload) => void
+  ) => () => void
+  getUsage: () => Promise<import('./lib/types').UsageStats | null>
+  refreshUsage: () => Promise<import('./lib/types').UsageStats | null>
+  onUsageUpdate: (callback: (data: import('./lib/types').UsageStats) => void) => () => void
+  getPromoStatus: () => Promise<import('./lib/types').PromoStatus | null>
+  onPromoUpdate: (callback: (data: import('./lib/types').PromoStatus) => void) => () => void
 }
 
 declare global {
