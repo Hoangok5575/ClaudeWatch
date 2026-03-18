@@ -18,13 +18,13 @@ export interface PlatformDetector {
 }
 
 function isClaudeCLI(command: string): boolean {
-  // Must contain /claude or end with /claude binary path
-  // Exclude Claude.app GUI
-  // Exclude grep
+  // Exclude Claude.app GUI and Electron helper processes
   if (command.includes('Claude.app')) return false
+  if (command.includes('Electron.app')) return false
+  if (command.includes('Electron Helper')) return false
   if (command.startsWith('grep ')) return false
-  // Match paths like /usr/local/bin/claude, ~/.claude/local/claude, etc.
-  return /\/claude(\s|$)/.test(command)
+  // Match: bare "claude" command, or full path ending in /claude
+  return /(?:^|\/)claude(\s|$)/.test(command)
 }
 
 function parsePsLine(line: string): RawProcessInfo | null {
