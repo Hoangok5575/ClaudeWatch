@@ -1,4 +1,17 @@
-import { Bell, Moon, Sun, Monitor, Power, Download, RefreshCw, CheckCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import {
+  Bell,
+  Moon,
+  Sun,
+  Monitor,
+  Power,
+  Download,
+  RefreshCw,
+  CheckCircle,
+  AlertTriangle,
+  ExternalLink,
+  X
+} from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useSettings } from '../hooks/useSettings'
 import { useUpdater } from '../hooks/useUpdater'
@@ -65,6 +78,31 @@ function SettingRow({
         {description && <p className="mt-0.5 text-xs text-text-secondary">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
+    </div>
+  )
+}
+
+function NotificationPermissionBanner() {
+  const [supported, setSupported] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!window.api?.checkNotificationPermission) return
+    window.api
+      .checkNotificationPermission()
+      .then((result) => setSupported(result.supported))
+      .catch(() => setSupported(null))
+  }, [])
+
+  if (supported === null || supported) return null
+
+  return (
+    <div className="mb-3 flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 p-2.5">
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-500" aria-hidden="true" />
+      <p className="text-xs text-yellow-200">
+        Notifications are not available. Open{' '}
+        <span className="font-medium">System Settings → Notifications → ClaudeWatch</span> and
+        enable &quot;Allow Notifications&quot;.
+      </p>
     </div>
   )
 }
@@ -177,6 +215,25 @@ export function Settings() {
             Notifications
           </h3>
 
+          <NotificationPermissionBanner />
+
+          <SettingRow
+            label="System Settings"
+            description="Configure banners, alerts, and sounds in macOS"
+          >
+            <button
+              type="button"
+              onClick={() => window.api?.openNotificationSettings()}
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface-hover transition-colors"
+              aria-label="Open macOS Notification Settings"
+            >
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              Open Notification Settings
+            </button>
+          </SettingRow>
+
+          <TestNotificationRow />
+
           <SettingRow
             label="On Task Complete"
             description="Notify when a task finishes (active → idle)"
@@ -266,6 +323,50 @@ export function Settings() {
               label="Do not disturb"
             />
           </SettingRow>
+
+          <SettingRow
+            label="Notification Cooldown"
+            description={`Suppress duplicate notifications within ${settings.notifications.cooldownSeconds}s`}
+          >
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={10}
+                max={120}
+                step={5}
+                value={settings.notifications.cooldownSeconds}
+                onChange={(e) =>
+                  updateSettings({
+                    notifications: {
+                      ...settings.notifications,
+                      cooldownSeconds: parseInt(e.target.value, 10)
+                    }
+                  })
+                }
+                className="h-1.5 w-24 appearance-none rounded-full bg-border accent-accent"
+                aria-label="Notification cooldown in seconds"
+              />
+              <span className="w-10 text-right text-xs tabular-nums text-text-secondary">
+                {settings.notifications.cooldownSeconds}s
+              </span>
+            </div>
+          </SettingRow>
+
+          <MutedProjectsSection
+            mutedProjects={settings.notifications.mutedProjects ?? []}
+            onUnmute={(path) =>
+              window.api?.unmuteProject(path).then(() => {
+                updateSettings({
+                  notifications: {
+                    ...settings.notifications,
+                    mutedProjects: (settings.notifications.mutedProjects ?? []).filter(
+                      (p) => p !== path
+                    )
+                  }
+                })
+              })
+            }
+          />
         </section>
 
         {/* Usage */}
@@ -365,6 +466,87 @@ export function Settings() {
 
         {/* Updates */}
         <UpdatesSection />
+      </div>
+    </div>
+  )
+}
+
+function TestNotificationRow() {
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(
+    null
+  )
+
+  const handleSendTest = async () => {
+    if (!window.api?.sendTestNotification) return
+    const result = await window.api.sendTestNotification()
+    if (result.sent) {
+      setFeedback({ type: 'success', message: 'Sent!' })
+      setTimeout(() => setFeedback(null), 3000)
+    } else {
+      setFeedback({ type: 'error', message: result.reason ?? 'Failed to send' })
+      setTimeout(() => setFeedback(null), 5000)
+    }
+  }
+
+  return (
+    <SettingRow label="Test Notification" description="Verify notifications appear on your system">
+      <div className="flex items-center gap-2">
+        {feedback && (
+          <span
+            className={cn(
+              'text-xs',
+              feedback.type === 'success' ? 'text-green-400' : 'text-red-400'
+            )}
+          >
+            {feedback.message}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={handleSendTest}
+          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface-hover transition-colors"
+          aria-label="Send test notification"
+        >
+          <Bell className="h-3 w-3" aria-hidden="true" />
+          Send Test
+        </button>
+      </div>
+    </SettingRow>
+  )
+}
+
+function MutedProjectsSection({
+  mutedProjects,
+  onUnmute
+}: {
+  mutedProjects: string[]
+  onUnmute: (path: string) => void
+}) {
+  if (mutedProjects.length === 0) {
+    return (
+      <div className="mt-3 border-t border-border pt-3">
+        <p className="text-xs text-text-tertiary">No projects muted</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <p className="mb-2 text-xs font-medium text-text-secondary">Muted Projects</p>
+      <div className="space-y-1">
+        {mutedProjects.map((path) => (
+          <div key={path} className="flex items-center justify-between gap-2 py-1">
+            <span className="min-w-0 truncate font-mono text-xs text-text-secondary">{path}</span>
+            <button
+              type="button"
+              onClick={() => onUnmute(path)}
+              className="shrink-0 rounded-md p-1 text-text-tertiary hover:bg-surface-hover hover:text-text-secondary transition-colors"
+              aria-label={`Unmute ${path}`}
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   )

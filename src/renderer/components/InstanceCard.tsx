@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronDown, Cpu, MemoryStick, Terminal, ExternalLink } from 'lucide-react'
+import { ChevronDown, Cpu, MemoryStick, Terminal, ExternalLink, BellOff, Bell } from 'lucide-react'
 import { cn, formatElapsedTime } from '../lib/utils'
 import type { ClaudeInstance } from '../lib/types'
 import { StatusBadge } from './StatusBadge'
 
 interface InstanceCardProps {
   instance: ClaudeInstance
+  isMuted?: boolean
+  onToggleMute?: (projectPath: string, muted: boolean) => void
 }
 
-export function InstanceCard({ instance }: InstanceCardProps) {
+export function InstanceCard({ instance, isMuted = false, onToggleMute }: InstanceCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [elapsed, setElapsed] = useState(instance.elapsedSeconds)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -124,7 +126,30 @@ export function InstanceCard({ instance }: InstanceCardProps) {
           {instance.flags.length > 0 && (
             <div className="mt-2 text-text-tertiary">Flags: {instance.flags.join(' ')}</div>
           )}
-          <div className="mt-3 flex justify-end">
+          <div className="mt-3 flex justify-end gap-2">
+            {onToggleMute && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleMute(instance.projectPath, !isMuted)
+                }}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  isMuted
+                    ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
+                    : 'bg-surface-hover text-text-secondary hover:bg-surface-hover/80'
+                )}
+                aria-label={isMuted ? 'Unmute notifications' : 'Mute notifications'}
+              >
+                {isMuted ? (
+                  <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {isMuted ? 'Unmute' : 'Mute'}
+              </button>
+            )}
             <button
               type="button"
               onClick={handleOpenTerminal}
