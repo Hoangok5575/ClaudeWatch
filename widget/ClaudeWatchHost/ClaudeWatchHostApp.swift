@@ -1,38 +1,29 @@
 import SwiftUI
 import WidgetKit
 
-/// Minimal host app that exists to register the WidgetKit extension with macOS.
-/// Also handles URL scheme triggers from the Electron app to force widget timeline reloads.
+/// Background-only host app that registers the WidgetKit extension with macOS.
+/// Handles --reload-widget argument from the Electron app to force widget timeline reloads.
+/// Runs as LSUIElement (no Dock icon, no menu bar, no visible window).
 @main
 struct ClaudeWatchHostApp: App {
     var body: some Scene {
-        WindowGroup {
-            VStack(spacing: 16) {
-                Image(systemName: "widget.small")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.secondary)
-
-                Text("ClaudeWatch Widget Host")
-                    .font(.title2.bold())
-
-                Text("This app registers the widget extension.\nAdd the widget via Desktop → Edit Widgets.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(40)
-            .frame(width: 360, height: 240)
+        Settings {
+            EmptyView()
         }
-        .windowResizability(.contentSize)
-        .handlesExternalEvents(matching: ["*"])
     }
 
     init() {
         // Check for reload argument passed via command line
         if CommandLine.arguments.contains("--reload-widget") {
             WidgetCenter.shared.reloadAllTimelines()
-            // Exit after triggering reload — don't show the window
+            // Exit after triggering reload
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                NSApplication.shared.terminate(nil)
+            }
+        } else {
+            // Launched manually (e.g. first install to register the widget extension).
+            // Nothing to show — just quit after macOS has discovered the .appex bundle.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 NSApplication.shared.terminate(nil)
             }
         }

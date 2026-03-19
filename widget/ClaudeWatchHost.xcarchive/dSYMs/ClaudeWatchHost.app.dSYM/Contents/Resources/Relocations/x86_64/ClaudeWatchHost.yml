@@ -1,26 +1,22 @@
 ---
 triple:          'x86_64-apple-darwin'
-binary-path:     '/Users/angelo/Library/Developer/Xcode/DerivedData/ClaudeWatchWidget-bcdprafaohcyolbjlnbqzmuustrl/Build/Intermediates.noindex/ArchiveIntermediates/ClaudeWatchHost/InstallationBuildProductsLocation/Applications/ClaudeWatchHost.app/Contents/MacOS/ClaudeWatchHost'
+binary-path:     '/Users/angelo/Library/Developer/Xcode/DerivedData/ClaudeWatchWidget-ciugkzuonycjmdfxdajsouolkbio/Build/Intermediates.noindex/ArchiveIntermediates/ClaudeWatchHost/InstallationBuildProductsLocation/Applications/ClaudeWatchHost.app/Contents/MacOS/ClaudeWatchHost'
 relocations:
-  - { offset: 0xB2A07, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppVAC7SwiftUI0D0AAWl', symObjAddr: 0x950, symBinAddr: 0x1000017C0, symSize: 0x30 }
-  - { offset: 0xB2A1B, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppVMa', symObjAddr: 0x980, symBinAddr: 0x1000017F0, symSize: 0x10 }
-  - { offset: 0xB2A2F, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV7SwiftUI0D0AA4BodyAdEP_AD5ScenePWT', symObjAddr: 0x990, symBinAddr: 0x100001800, symSize: 0x20 }
-  - { offset: 0xB2A43, size: 0x8, addend: 0x0, symName: ___swift_instantiateConcreteTypeFromMangledNameV2, symObjAddr: 0x9B0, symBinAddr: 0x100001820, symSize: 0x40 }
-  - { offset: 0xB2A57, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI15ModifiedContentVyACyAA6VStackVyAA9TupleViewVyACyACyAA5ImageVAA30_EnvironmentKeyWritingModifierVyAA4FontVSgGGAA016_ForegroundStyleL0VyAA017HierarchicalShapeO0VGG_AA4TextVACyAxKyAA0R9AlignmentOGGtGGAA14_PaddingLayoutVGAA06_FrameU0VGACyxq_GAA0G0A2AA10_RzAA0gL0R_rlWl', symObjAddr: 0x9F0, symBinAddr: 0x100001860, symSize: 0x70 }
-  - { offset: 0xB2A6B, size: 0x8, addend: 0x0, symName: ___swift_instantiateConcreteTypeFromMangledNameAbstractV2, symObjAddr: 0xA60, symBinAddr: 0x1000018D0, symSize: 0x50 }
-  - { offset: 0xB2A7F, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI15ModifiedContentVyAA6VStackVyAA9TupleViewVyACyACyAA5ImageVAA30_EnvironmentKeyWritingModifierVyAA4FontVSgGGAA016_ForegroundStyleL0VyAA017HierarchicalShapeO0VGG_AA4TextVACyAxKyAA0R9AlignmentOGGtGGAA14_PaddingLayoutVGACyxq_GAA0G0A2AA7_RzAA0gL0R_rlWl', symObjAddr: 0xAB0, symBinAddr: 0x100001920, symSize: 0x80 }
-  - { offset: 0xB2A93, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI9TupleViewVyAA15ModifiedContentVyAEyAA5ImageVAA30_EnvironmentKeyWritingModifierVyAA4FontVSgGGAA016_ForegroundStyleK0VyAA017HierarchicalShapeN0VGG_AA4TextVAEyAvIyAA0Q9AlignmentOGGtGWOc', symObjAddr: 0xB70, symBinAddr: 0x1000019E0, symSize: 0x40 }
-  - { offset: 0xB2AA7, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI17EnvironmentValuesV4fontAA4FontVSgvpACTKq', symObjAddr: 0xBE0, symBinAddr: 0x100001A50, symSize: 0x20 }
-  - { offset: 0xB2ABF, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI17EnvironmentValuesV4fontAA4FontVSgvpACTkq', symObjAddr: 0xC00, symBinAddr: 0x100001A70, symSize: 0x30 }
-  - { offset: 0xB2AD7, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI4TextV7StorageOWOe', symObjAddr: 0xC30, symBinAddr: 0x100001AA0, symSize: 0x20 }
-  - { offset: 0xB2AEB, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI22HierarchicalShapeStyleVAcA0dE0AAWl', symObjAddr: 0xC50, symBinAddr: 0x100001AC0, symSize: 0x30 }
-  - { offset: 0xB2AFF, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI17EnvironmentValuesV22multilineTextAlignmentAA0fG0OvpACTKq', symObjAddr: 0xC80, symBinAddr: 0x100001AF0, symSize: 0x20 }
-  - { offset: 0xB2B17, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI17EnvironmentValuesV22multilineTextAlignmentAA0fG0OvpACTkq', symObjAddr: 0xCA0, symBinAddr: 0x100001B10, symSize: 0x20 }
-  - { offset: 0xB2B2F, size: 0x8, addend: 0x0, symName: '_$s7SwiftUI4TextV7StorageOWOy', symObjAddr: 0xCC0, symBinAddr: 0x100001B30, symSize: 0x20 }
-  - { offset: 0xB2B4B, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV4bodyQrvg', symObjAddr: 0x0, symBinAddr: 0x100000E70, symSize: 0x200 }
-  - { offset: 0xB2B81, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV4bodyQrvg7SwiftUI4ViewPAEE5frame5width6height9alignmentQr12CoreGraphics7CGFloatVSg_AoE9AlignmentVtFQOyAgEE7paddingyQrANFQOyAE6VStackVyAE05TupleH0VyAgEE15foregroundStyleyQrqd__AE05ShapeU0Rd__lFQOyAgEE4fontyQrAE4FontVSgFQOyAE5ImageV_Qo__AE012HierarchicalvU0VQo__AE4TextVAgEE013multilineTextP0yQrAE04TextP0OFQOyA8__Qo_tGG_Qo__Qo_ycfU_', symObjAddr: 0x200, symBinAddr: 0x100001070, symSize: 0x2C0 }
-  - { offset: 0xB2CBA, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV4bodyQrvg7SwiftUI4ViewPAEE5frame5width6height9alignmentQr12CoreGraphics7CGFloatVSg_AoE9AlignmentVtFQOyAgEE7paddingyQrANFQOyAE6VStackVyAE05TupleH0VyAgEE15foregroundStyleyQrqd__AE05ShapeU0Rd__lFQOyAgEE4fontyQrAE4FontVSgFQOyAE5ImageV_Qo__AE012HierarchicalvU0VQo__AE4TextVAgEE013multilineTextP0yQrAE04TextP0OFQOyA8__Qo_tGG_Qo__Qo_ycfU_A13_yXEfU_', symObjAddr: 0x4C0, symBinAddr: 0x100001330, symSize: 0x440 }
-  - { offset: 0xB3114, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV7SwiftUI0D0AadEP4body4BodyQzvgTW', symObjAddr: 0x900, symBinAddr: 0x100001770, symSize: 0x10 }
-  - { offset: 0xB312F, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV7SwiftUI0D0AadEPxycfCTW', symObjAddr: 0x910, symBinAddr: 0x100001780, symSize: 0x10 }
-  - { offset: 0xB3158, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x920, symBinAddr: 0x100001790, symSize: 0x30 }
+  - { offset: 0xB2A05, size: 0x8, addend: 0x0, symName: '_$sIeg_IeyB_TR', symObjAddr: 0x10, symBinAddr: 0x1000010C0, symSize: 0x30 }
+  - { offset: 0xB2A1D, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppVAC7SwiftUI0D0AAWl', symObjAddr: 0x190, symBinAddr: 0x100001240, symSize: 0x30 }
+  - { offset: 0xB2A31, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppVMa', symObjAddr: 0x1C0, symBinAddr: 0x100001270, symSize: 0x10 }
+  - { offset: 0xB2A45, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV7SwiftUI0D0AA4BodyAdEP_AD5ScenePWT', symObjAddr: 0x1D0, symBinAddr: 0x100001280, symSize: 0x20 }
+  - { offset: 0xB2AC7, size: 0x8, addend: 0x0, symName: '_$sSTsE8contains5whereS2b7ElementQzKXE_tKFSaySSG_Tg5', symObjAddr: 0x1F0, symBinAddr: 0x1000012A0, symSize: 0xB0 }
+  - { offset: 0xB2BFA, size: 0x8, addend: 0x0, symName: '_$sSTsSQ7ElementRpzrlE8containsySbABFSbABXEfU_SaySSG_TG5TA', symObjAddr: 0x660, symBinAddr: 0x100001710, symSize: 0x50 }
+  - { offset: 0xB2C4F, size: 0x8, addend: 0x0, symName: '_$sSo17OS_dispatch_queueCMa', symObjAddr: 0x6B0, symBinAddr: 0x100001760, symSize: 0x40 }
+  - { offset: 0xB2C63, size: 0x8, addend: 0x0, symName: _block_copy_helper, symObjAddr: 0x6F0, symBinAddr: 0x1000017A0, symSize: 0x20 }
+  - { offset: 0xB2C77, size: 0x8, addend: 0x0, symName: _block_destroy_helper, symObjAddr: 0x710, symBinAddr: 0x1000017C0, symSize: 0x10 }
+  - { offset: 0xB2C8B, size: 0x8, addend: 0x0, symName: '_$s8Dispatch0A13WorkItemFlagsVACs10SetAlgebraAAWl', symObjAddr: 0x720, symBinAddr: 0x1000017D0, symSize: 0x40 }
+  - { offset: 0xB2C9F, size: 0x8, addend: 0x0, symName: ___swift_instantiateConcreteTypeFromMangledNameV2, symObjAddr: 0x760, symBinAddr: 0x100001810, symSize: 0x40 }
+  - { offset: 0xB2CB3, size: 0x8, addend: 0x0, symName: ___swift_instantiateConcreteTypeFromMangledNameAbstractV2, symObjAddr: 0x7A0, symBinAddr: 0x100001850, symSize: 0x50 }
+  - { offset: 0xB2CDB, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV4bodyQrvg7SwiftUI9EmptyViewVyXEfU_', symObjAddr: 0x0, symBinAddr: 0x1000010B0, symSize: 0x10 }
+  - { offset: 0xB2D0A, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV7SwiftUI0D0AadEP4body4BodyQzvgTW', symObjAddr: 0xA0, symBinAddr: 0x100001150, symSize: 0xB0 }
+  - { offset: 0xB2D49, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppV7SwiftUI0D0AadEPxycfCTW', symObjAddr: 0x150, symBinAddr: 0x100001200, symSize: 0x10 }
+  - { offset: 0xB2DD1, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x160, symBinAddr: 0x100001210, symSize: 0x30 }
+  - { offset: 0xB2E31, size: 0x8, addend: 0x0, symName: '_$s15ClaudeWatchHost0abC3AppVACycfCTf4d_n', symObjAddr: 0x2A0, symBinAddr: 0x100001350, symSize: 0x3C0 }
 ...

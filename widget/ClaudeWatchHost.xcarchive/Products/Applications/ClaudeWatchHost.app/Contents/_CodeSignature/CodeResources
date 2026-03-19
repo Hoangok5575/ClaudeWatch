@@ -10,7 +10,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			xk5bHOonR0UVyunaPcpN6LD3sGQ=
+			YBZ/C+eeS/M7Ooc5v264TdR3Ky0=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.zkidzdev.claudewatch.host.widget" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: Christian ANgelo Umali (54W5DPN35A)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
