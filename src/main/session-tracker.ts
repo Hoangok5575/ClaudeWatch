@@ -12,7 +12,7 @@ export class SessionTracker extends EventEmitter {
   private polling = false
   /** Cooldown map: PID → timestamp of last active→idle emission */
   private idleCooldowns: Map<number, number> = new Map()
-  private static readonly IDLE_COOLDOWN_MS = 60_000
+  private idleCooldownMs: number
   private static readonly MIN_ACTIVE_DURATION_MS = 30_000
   /** Hysteresis: require N consecutive polls confirming a new state before accepting */
   private statusConfirmations: Map<number, { status: string; count: number }> = new Map()
@@ -26,6 +26,7 @@ export class SessionTracker extends EventEmitter {
       maxHistoryEntries: number
       staleThresholdMinutes: number
       requiredConfirmations?: number
+      cooldownSeconds?: number
     }
   ) {
     super()
@@ -33,6 +34,7 @@ export class SessionTracker extends EventEmitter {
     this.maxHistoryEntries = settings.maxHistoryEntries
     this.staleThresholdMinutes = settings.staleThresholdMinutes
     this.requiredConfirmations = settings.requiredConfirmations ?? 2
+    this.idleCooldownMs = (settings.cooldownSeconds ?? 60) * 1000
   }
 
   start(intervalMs: number): void {
@@ -55,6 +57,10 @@ export class SessionTracker extends EventEmitter {
 
   setStaleThreshold(minutes: number): void {
     this.staleThresholdMinutes = minutes
+  }
+
+  setCooldownSeconds(seconds: number): void {
+    this.idleCooldownMs = seconds * 1000
   }
 
   getInstances(): ClaudeInstance[] {
@@ -169,7 +175,7 @@ export class SessionTracker extends EventEmitter {
           if (prevBase === 'active' && currBase === 'idle') {
             const lastEmit = this.idleCooldowns.get(proc.pid)
             // Suppress rapid active→idle flapping: skip if within cooldown window
-            if (lastEmit && now - lastEmit < SessionTracker.IDLE_COOLDOWN_MS) {
+            if (lastEmit && now - lastEmit < this.idleCooldownMs) {
               continue
             }
             // Suppress if active duration was too brief (not a real task)
