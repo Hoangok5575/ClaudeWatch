@@ -4,21 +4,30 @@ directories:
   buildResources: build
   output: dist
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.*'
-  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc,tsconfig*.json,vitest.config.*}'
-  - '!{*.md,*.txt}'
+  - out/**/*
+  - package.json
+  - node_modules/**/*
+  - '!node_modules/lucide-react/**/*'
+  - '!**/node_modules/**/*.js.map'
+  - '!**/node_modules/**/*.d.ts'
+  - '!**/node_modules/**/*.d.cts'
+  - '!**/node_modules/**/*.d.mts'
+  - '!**/node_modules/**/README*'
+  - '!**/node_modules/**/CHANGELOG*'
+  - '!**/node_modules/**/LICENSE*'
+  - '!**/node_modules/**/.github/**'
 afterPack: scripts/afterSign.js
 mac:
   artifactName: '${name}-${version}-${arch}.${ext}'
   target:
     - target: dmg
       arch:
-        - universal
+        - arm64
+        - x64
     - target: zip
       arch:
-        - universal
+        - arm64
+        - x64
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   notarize: true

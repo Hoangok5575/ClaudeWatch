@@ -7,12 +7,12 @@ export class SoundPlayer {
   private soundPath: string
 
   constructor() {
-    // In production: process.resourcesPath/sounds/task-complete.aiff
-    // In dev: resources/sounds/task-complete.aiff
+    // In production: process.resourcesPath/sounds/task-complete.m4a
+    // In dev: resources/sounds/task-complete.m4a
     const isProd = app.isPackaged
     this.soundPath = isProd
-      ? join(process.resourcesPath, 'sounds', 'task-complete.aiff')
-      : resolve(__dirname, '../../resources/sounds/task-complete.aiff')
+      ? join(process.resourcesPath, 'sounds', 'task-complete.m4a')
+      : resolve(__dirname, '../../resources/sounds/task-complete.m4a')
   }
 
   async playTaskComplete(): Promise<void> {
