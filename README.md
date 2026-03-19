@@ -53,6 +53,10 @@ ClaudeWatch is a cross-platform desktop application that detects and monitors ru
 
 ![2x Indicator](docs/plans/ss-3.png)
 
+**macOS Widget** — Large widget showing live session stats, usage costs, and instance list:
+
+![macOS Widget](docs/plans/ss-4.png)
+
 ### How It Works
 
 ```
@@ -231,7 +235,7 @@ Detects Claude CLI processes running on the system.
 
 **Configuration:**
 
-- `cpuIdleThreshold` (default: 1.0%) — CPU below this = idle
+- `cpuIdleThreshold` (default: 3.0%) — CPU below this = idle
 
 ### SessionTracker (`src/main/session-tracker.ts`)
 
@@ -296,7 +300,7 @@ App.tsx
         │       └── InstanceCard (expandable)
         │           ├── StatusBadge
         │           ├── Metrics (time, CPU, MEM)
-        │           └── [expanded] Details + Open in Warp
+        │           └── [expanded] Details + Open in Terminal
         ├── SessionHistory
         │   └── History entries with time-ago
         └── Settings
@@ -344,19 +348,19 @@ The entire `body` is set as a drag region (`-webkit-app-region: drag`) so the fr
 
 ### Renderer → Main (invoke/handle)
 
-| Channel              | Direction | Input                  | Output                  |
-| -------------------- | --------- | ---------------------- | ----------------------- |
-| `instances:get`      | Request   | —                      | `{ instances, stats }`  |
-| `settings:get`       | Request   | —                      | `AppSettings`           |
-| `settings:set`       | Request   | `Partial<AppSettings>` | `AppSettings`           |
-| `history:get`        | Request   | —                      | `SessionHistoryEntry[]` |
-| `history:clear`      | Request   | —                      | `{ success: boolean }`  |
-| `app:open-dashboard` | Action    | —                      | `{ success: boolean }`  |
-| `app:quit`           | Action    | —                      | void                    |
-| `terminal:open`      | Action    | `projectPath: string`  | `{ success: boolean }`  |
-| `updater:check`      | Action    | —                      | void                    |
-| `updater:download`   | Action    | —                      | void                    |
-| `updater:install`    | Action    | —                      | void                    |
+| Channel              | Direction | Input                        | Output                  |
+| -------------------- | --------- | ---------------------------- | ----------------------- |
+| `instances:get`      | Request   | —                            | `{ instances, stats }`  |
+| `settings:get`       | Request   | —                            | `AppSettings`           |
+| `settings:set`       | Request   | `Partial<AppSettings>`       | `AppSettings`           |
+| `history:get`        | Request   | —                            | `SessionHistoryEntry[]` |
+| `history:clear`      | Request   | —                            | `{ success: boolean }`  |
+| `app:open-dashboard` | Action    | —                            | `{ success: boolean }`  |
+| `app:quit`           | Action    | —                            | void                    |
+| `terminal:open`      | Action    | `projectPath, terminalType?` | `{ success: boolean }`  |
+| `updater:check`      | Action    | —                            | void                    |
+| `updater:download`   | Action    | —                            | void                    |
+| `updater:install`    | Action    | —                            | void                    |
 
 ### Main → Renderer (send/on)
 
@@ -378,7 +382,7 @@ window.api = {
   clearHistory()                    // → ipcRenderer.invoke('history:clear')
   openDashboard()                   // → ipcRenderer.invoke('app:open-dashboard')
   quit()                            // → ipcRenderer.invoke('app:quit')
-  openTerminal(path)                // → ipcRenderer.invoke('terminal:open', path)
+  openTerminal(path, terminalType?) // → ipcRenderer.invoke('terminal:open', path, terminalType)
   onInstancesUpdate(callback)       // → ipcRenderer.on('instances:update', ...)
   checkForUpdates()                 // → ipcRenderer.invoke('updater:check')
   downloadUpdate()                  // → ipcRenderer.invoke('updater:download')
@@ -452,7 +456,7 @@ Extracted from the executable path via `wmic`.
 ```typescript
 {
   pollingIntervalMs: 3000,       // How often to scan for processes
-  cpuIdleThreshold: 1.0,         // CPU % below which = idle
+  cpuIdleThreshold: 3.0,         // CPU % below which = idle
   launchAtLogin: false,          // Start with macOS/Windows
   notifications: {
     onIdle: true,                // Notify when instance goes idle
@@ -471,7 +475,7 @@ Extracted from the executable path via `wmic`.
 | Setting             | Min | Max   | Default |
 | ------------------- | --- | ----- | ------- |
 | `pollingIntervalMs` | 500 | 60000 | 3000    |
-| `cpuIdleThreshold`  | 0.1 | 100   | 1.0     |
+| `cpuIdleThreshold`  | 0.1 | 100   | 3.0     |
 | `maxHistoryEntries` | 1   | 10000 | 100     |
 
 Validation happens server-side in `ipc-handlers.ts` before persisting.
@@ -899,6 +903,10 @@ ClaudeWatch/
 │   │   ├── notifications.ts        # Native OS notifications
 │   │   ├── auto-updater.ts         # Auto-update manager (electron-updater)
 │   │   ├── ipc-handlers.ts         # IPC request handlers
+│   │   ├── terminal-resolver.ts    # Detect parent terminal from process tree
+│   │   ├── terminal-opener.ts      # Open project in detected terminal
+│   │   ├── widget-stats-writer.ts  # Write stats.json for macOS widget
+│   │   ├── widget-sync.ts          # Coordinate widget data updates
 │   │   ├── format-utils.ts         # Duration formatting
 │   │   └── platform/
 │   │       ├── darwin.ts           # macOS process detection (ps/lsof)
@@ -1029,9 +1037,9 @@ List items get staggered animation delays (30ms per item, up to 10 items).
 
 **Fix:** Add the `no-drag` class to interactive container elements (e.g., `.card-interactive`).
 
-### "Open in Warp" opens wrong tab / new tab
+### "Open in Terminal" opens the wrong app
 
-**Limitation:** Warp does not expose tab-level control via AppleScript. The current implementation activates Warp without creating a new tab. Finding and focusing an existing tab for a specific project is not programmatically possible with Warp's current API.
+ClaudeWatch detects the terminal each session runs in and tries to open the correct app. If the detected terminal has no dedicated opener (e.g., Alacritty, Hyper), it falls back to Terminal.app. Supported dedicated openers: Warp, iTerm2, Terminal.app, Kitty, WezTerm, Ghostty, VS Code, Cursor.
 
 ### No instances detected
 
@@ -1075,12 +1083,13 @@ Ensure Visual Studio Build Tools 2019+ are installed with the "Desktop developme
 - [x] Session history tracking
 - [x] Configurable notifications
 - [x] Settings persistence
-- [x] Warp terminal integration
+- [x] Multi-terminal detection and opening (Warp, iTerm2, Terminal.app, Kitty, WezTerm, Ghostty, VS Code, Cursor)
+- [x] Session type detection (CLI, VS Code, subagent)
 - [x] Auto-updater integration (electron-updater + GitHub Releases CI/CD)
+- [x] macOS Widgets (WidgetKit) — Small/Medium/Large widgets with live stats, usage costs, and instance list
 
 ### Planned
 
-- [ ] **macOS Widgets** (WidgetKit) — Small/Medium/Large widgets for desktop/lock screen monitoring (requires Swift, see `plans/menubar-popover-and-widgets-2026-03-18.md`)
 - [ ] Linux process detection (`/proc` filesystem)
 - [ ] Export session history (CSV/JSON)
 - [ ] Custom alert rules (e.g., "notify if idle for > 5 minutes")
