@@ -27,6 +27,20 @@ const api = {
   openTerminal: (path: string, terminalType?: string): Promise<{ success: boolean }> =>
     ipcRenderer.invoke('terminal:open', path, terminalType),
 
+  checkNotificationPermission: (): Promise<{ supported: boolean }> =>
+    ipcRenderer.invoke('notifications:check-permission'),
+
+  openNotificationSettings: (): Promise<void> => ipcRenderer.invoke('notifications:open-settings'),
+
+  sendTestNotification: (): Promise<{ sent: boolean; reason?: string }> =>
+    ipcRenderer.invoke('notifications:send-test'),
+
+  muteProject: (projectPath: string): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('notifications:mute-project', projectPath),
+
+  unmuteProject: (projectPath: string): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('notifications:unmute-project', projectPath),
+
   onInstancesUpdate: (callback: (data: InstanceUpdate) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: InstanceUpdate): void =>
       callback(data)

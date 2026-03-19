@@ -83,7 +83,8 @@ app.whenReady().then(() => {
   const monitor = new ProcessMonitor({ terminalResolver })
   tracker = new SessionTracker(monitor, {
     maxHistoryEntries: settings.maxHistoryEntries,
-    staleThresholdMinutes: settings.staleThresholdMinutes
+    staleThresholdMinutes: settings.staleThresholdMinutes,
+    cooldownSeconds: settings.notifications.cooldownSeconds
   })
 
   // Initialize notifications and sound player
@@ -126,6 +127,7 @@ app.whenReady().then(() => {
     updater,
     usageReader,
     promoChecker,
+    notifications,
     onOpenDashboard: showDashboard
   })
 
@@ -152,6 +154,9 @@ app.whenReady().then(() => {
 
   // Wire notification events
   tracker.on('instance-status-changed', ({ instance, previousStatus }) => {
+    console.log(
+      `[notifications] instance-status-changed: pid=${instance.pid} ${previousStatus} → ${instance.status}`
+    )
     if (previousStatus === 'active' && instance.status === 'idle') {
       // Task just finished (active → idle) — fire task complete notification
       notifications.notifyTaskComplete(instance)
@@ -167,6 +172,7 @@ app.whenReady().then(() => {
   })
 
   tracker.on('instance-exited', (entry) => {
+    console.log(`[notifications] instance-exited: pid=${entry.pid} project=${entry.projectName}`)
     store.addHistoryEntry(entry)
     notifications.notifyExited(entry)
     terminalResolver.evict(entry.pid)

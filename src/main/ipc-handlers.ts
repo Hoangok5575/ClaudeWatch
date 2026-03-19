@@ -1,10 +1,11 @@
-import { ipcMain, BrowserWindow, app } from 'electron'
+import { ipcMain, BrowserWindow, app, shell } from 'electron'
 import { openTerminal } from './terminal-opener'
 import type { SessionTracker } from './session-tracker'
 import type { SettingsStore } from './store'
 import type { AutoUpdaterManager } from './auto-updater'
 import type { UsageStatsReader } from './usage-stats'
 import type { PromoChecker } from './promo-checker'
+import type { NotificationManager } from './notifications'
 import type { AppSettings } from '../renderer/lib/types'
 
 export function validateSettings(data: Partial<AppSettings>): Partial<AppSettings> {
@@ -28,6 +29,12 @@ export function validateSettings(data: Partial<AppSettings>): Partial<AppSetting
   if (validated.staleThresholdMinutes !== undefined) {
     validated.staleThresholdMinutes = Math.max(5, Math.min(120, validated.staleThresholdMinutes))
   }
+  if (validated.notifications?.cooldownSeconds !== undefined) {
+    validated.notifications = {
+      ...validated.notifications,
+      cooldownSeconds: Math.max(10, Math.min(120, validated.notifications.cooldownSeconds))
+    }
+  }
 
   return validated
 }
@@ -38,11 +45,13 @@ interface IpcHandlerOptions {
   updater?: AutoUpdaterManager
   usageReader?: UsageStatsReader
   promoChecker?: PromoChecker
+  notifications?: NotificationManager
   onOpenDashboard: () => void
 }
 
 export function setupIpcHandlers(options: IpcHandlerOptions): void {
-  const { tracker, store, updater, usageReader, promoChecker, onOpenDashboard } = options
+  const { tracker, store, updater, usageReader, promoChecker, notifications, onOpenDashboard } =
+    options
 
   const beginQuit = (): void => {
     ;(app as Electron.App & { isQuitting?: boolean }).isQuitting = true
@@ -72,6 +81,10 @@ export function setupIpcHandlers(options: IpcHandlerOptions): void {
       // Propagate stale threshold to session tracker
       if (validated.staleThresholdMinutes !== undefined) {
         tracker.setStaleThreshold(updated.staleThresholdMinutes)
+      }
+      // Propagate cooldown to session tracker
+      if (validated.notifications?.cooldownSeconds !== undefined) {
+        tracker.setCooldownSeconds(updated.notifications.cooldownSeconds)
       }
       return updated
     }
@@ -122,6 +135,48 @@ export function setupIpcHandlers(options: IpcHandlerOptions): void {
   ipcMain.handle('promo:get', () => {
     return promoChecker?.getLastData() ?? null
   })
+
+  ipcMain.handle('notifications:check-permission', () => {
+    return { supported: notifications?.isSupported() ?? false }
+  })
+
+  ipcMain.handle('notifications:open-settings', () => {
+    shell.openExternal('x-apple.systempreferences:com.apple.preference.notifications')
+  })
+
+  ipcMain.handle('notifications:send-test', () => {
+    if (!notifications) return { sent: false, reason: 'Notification manager not available' }
+    return notifications.sendTest()
+  })
+
+  ipcMain.handle(
+    'notifications:mute-project',
+    (_event: Electron.IpcMainInvokeEvent, projectPath: string) => {
+      const settings = store.getSettings()
+      const mutedProjects = settings.notifications.mutedProjects ?? []
+      if (!mutedProjects.includes(projectPath)) {
+        mutedProjects.push(projectPath)
+      }
+      store.setSettings({
+        notifications: { ...settings.notifications, mutedProjects }
+      })
+      return { success: true }
+    }
+  )
+
+  ipcMain.handle(
+    'notifications:unmute-project',
+    (_event: Electron.IpcMainInvokeEvent, projectPath: string) => {
+      const settings = store.getSettings()
+      const mutedProjects = (settings.notifications.mutedProjects ?? []).filter(
+        (p) => p !== projectPath
+      )
+      store.setSettings({
+        notifications: { ...settings.notifications, mutedProjects }
+      })
+      return { success: true }
+    }
+  )
 
   ipcMain.handle(
     'terminal:open',
