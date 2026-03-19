@@ -49,9 +49,9 @@ ClaudeWatch is a cross-platform desktop application that detects and monitors ru
 
 ![Tray Popover](docs/plans/ss-2.png)
 
-**Error Dialog** — Native error reporting for main process exceptions:
+**2x Indicator** — Tray popover showing Claude promo status:
 
-![Error Dialog](docs/plans/ss-3.png)
+![2x Indicator](docs/plans/ss-3.png)
 
 ### How It Works
 
