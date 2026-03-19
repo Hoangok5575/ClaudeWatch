@@ -234,6 +234,11 @@ export class TrayManager {
     this.tray.setTitle(`${prefix}\u25CF ${this.stats.active}`)
   }
 
+  /** Show the popover programmatically (e.g., on dashboard minimize) */
+  show(): void {
+    this.showPopover()
+  }
+
   getPopoverWindow(): BrowserWindow | null {
     return this.popover
   }

@@ -44,6 +44,7 @@ function createWindow(store: SettingsStore): BrowserWindow {
     if (!app.isQuitting) {
       event.preventDefault()
       win.hide()
+      app.dock?.hide()
     }
   })
 
@@ -52,7 +53,14 @@ function createWindow(store: SettingsStore): BrowserWindow {
     const settings = store.getSettings()
     if (settings.minimizeToTray) {
       event.preventDefault()
-      win.hide()
+      // Defer hide to next tick so Electron finishes processing the event
+      process.nextTick(() => {
+        if (!win.isDestroyed()) {
+          win.hide()
+          app.dock?.hide()
+          trayManager?.show()
+        }
+      })
     }
   })
 
@@ -68,6 +76,10 @@ function createWindow(store: SettingsStore): BrowserWindow {
 
 function showDashboard(): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+    app.dock?.show()
     mainWindow.show()
     mainWindow.focus()
   }
@@ -217,6 +229,16 @@ app.on('window-all-closed', () => {
 // macOS: re-show window when dock icon clicked
 app.on('activate', () => {
   showDashboard()
+})
+
+// Graceful exit when parent dev server is killed
+process.on('SIGTERM', () => {
+  app.isQuitting = true
+  app.quit()
+})
+process.on('SIGINT', () => {
+  app.isQuitting = true
+  app.quit()
 })
 
 // Extend app type for isQuitting flag
