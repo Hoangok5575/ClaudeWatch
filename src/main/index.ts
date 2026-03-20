@@ -15,6 +15,15 @@ import { createWidgetStatsWriter } from './widget-stats-writer'
 import { SoundPlayer } from './sound-player'
 import { setupWidgetSync } from './widget-sync'
 
+// Prevent "write EIO" crashes when stdout/stderr pipe is broken
+// (e.g., launching terminal closed, or running packaged without a TTY)
+for (const stream of [process.stdout, process.stderr]) {
+  stream?.on?.('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EIO' || err.code === 'EPIPE') return
+    throw err
+  })
+}
+
 let mainWindow: BrowserWindow | null = null
 let trayManager: TrayManager | null = null
 let tracker: SessionTracker | null = null
