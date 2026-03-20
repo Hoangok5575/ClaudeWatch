@@ -13,12 +13,20 @@ import {
   AlertCircle,
   CheckCircle
 } from 'lucide-react'
-import { cn, formatCompactNumber, formatCurrency, formatCountdown, timeAgo } from '../lib/utils'
+import {
+  cn,
+  formatCompactNumber,
+  formatCurrency,
+  formatCountdown,
+  secondsUntilReset,
+  timeAgo
+} from '../lib/utils'
 import { useInstances, type StatusFilter } from '../hooks/useInstances'
 import { useUsage } from '../hooks/useUsage'
 import { usePromoStatus } from '../hooks/usePromoStatus'
+import { useRateLimits } from '../hooks/useRateLimits'
 import { InstanceList } from './InstanceList'
-import type { ClaudeInstance } from '../lib/types'
+import type { ClaudeInstance, RateLimits } from '../lib/types'
 
 const filterButtons: { filter: StatusFilter; label: string }[] = [
   { filter: 'all', label: 'All' },
@@ -85,6 +93,7 @@ export function Dashboard() {
   } = useInstances()
   const { usage, showModelBreakdown, setShowModelBreakdown } = useUsage()
   const { promo } = usePromoStatus()
+  const { rateLimits } = useRateLimits()
 
   const showGrouped = filter === 'all'
 
@@ -129,6 +138,9 @@ export function Dashboard() {
             showModelBreakdown={showModelBreakdown}
             onToggleBreakdown={() => setShowModelBreakdown(!showModelBreakdown)}
           />
+
+          {/* Rate limits */}
+          <RateLimitSection rateLimits={rateLimits} />
 
           {/* Filter bar */}
           <div className="flex items-center gap-2">
@@ -493,6 +505,59 @@ function WeeklyTokenBar({
           aria-label="Weekly token usage"
         />
       </div>
+    </div>
+  )
+}
+
+function RateLimitSection({ rateLimits }: { rateLimits: RateLimits | null }) {
+  if (!rateLimits?.dataAvailable) return null
+
+  return (
+    <div>
+      <div
+        className="mb-2 text-caption uppercase tracking-wider text-text-tertiary"
+        aria-hidden="true"
+      >
+        Rate Limits
+      </div>
+      <div className="grid grid-cols-2 gap-3" role="region" aria-label="Rate limit usage">
+        <RateLimitBar label="5-hour" window={rateLimits.window_5h} />
+        <RateLimitBar label="7-day" window={rateLimits.window_7d} />
+      </div>
+    </div>
+  )
+}
+
+function RateLimitBar({ label, window: win }: { label: string; window: RateLimits['window_5h'] }) {
+  const percent = Math.min(100, win.used_percentage)
+  const barColor =
+    percent >= 80 ? 'bg-red-400' : percent >= 50 ? 'bg-amber-400' : 'bg-status-active'
+  const textColor =
+    percent >= 80 ? 'text-red-400' : percent >= 50 ? 'text-amber-400' : 'text-status-active'
+  const countdown = secondsUntilReset(win.resets_at)
+
+  return (
+    <div className="stat-card border-l-2 border-l-border">
+      <div className="mb-1.5 flex items-center justify-between text-[11px]">
+        <span className="text-text-tertiary">{label}</span>
+        <span className={cn('tabular-nums', textColor)}>{Math.round(percent)}%</span>
+      </div>
+      <div className="mb-1 h-1.5 w-full overflow-hidden rounded-full bg-border">
+        <div
+          className={cn('h-full rounded-full transition-all duration-500', barColor)}
+          style={{ width: `${percent}%` }}
+          role="progressbar"
+          aria-valuenow={Math.round(percent)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${label} rate limit usage`}
+        />
+      </div>
+      {countdown > 0 && (
+        <div className="text-[10px] tabular-nums text-text-tertiary">
+          resets in {formatCountdown(countdown)}
+        </div>
+      )}
     </div>
   )
 }

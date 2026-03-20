@@ -3,7 +3,8 @@ import { Activity, Moon, XCircle, CheckCircle, Cpu, MemoryStick } from 'lucide-r
 import { cn, formatElapsedTime, formatCompactNumber, formatCurrency, timeAgo } from '../lib/utils'
 import { useUsage } from '../hooks/useUsage'
 import { usePromoStatus } from '../hooks/usePromoStatus'
-import type { ClaudeInstance, InstanceUpdate } from '../lib/types'
+import { useRateLimits } from '../hooks/useRateLimits'
+import type { ClaudeInstance, InstanceUpdate, RateLimits } from '../lib/types'
 
 const RECENT_WINDOW_MS = 10 * 60 * 1000
 
@@ -42,6 +43,7 @@ export function PopoverView() {
   const [stats, setStats] = useState(emptyStats)
   const { usage } = useUsage()
   const { promo } = usePromoStatus()
+  const { rateLimits } = useRateLimits()
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.api) return
@@ -158,6 +160,14 @@ export function PopoverView() {
               weeklyTokenTarget={usage.weeklyTokenTarget}
             />
           )}
+          {rateLimits?.dataAvailable && <PopoverRateLimitPills rateLimits={rateLimits} />}
+        </div>
+      )}
+
+      {/* Rate limits standalone (when usage unavailable) */}
+      {!usage?.dataAvailable && rateLimits?.dataAvailable && (
+        <div className="border-b border-border px-4 py-2">
+          <PopoverRateLimitPills rateLimits={rateLimits} />
         </div>
       )}
 
@@ -362,6 +372,24 @@ function PopoverWeeklyBar({
       <span className="shrink-0 text-[10px] tabular-nums text-text-tertiary">
         {formatCompactNumber(weeklyTokens)}/{formatCompactNumber(weeklyTokenTarget)}
       </span>
+    </div>
+  )
+}
+
+function rateLimitColor(percent: number): string {
+  if (percent >= 80) return 'text-red-400'
+  if (percent >= 50) return 'text-amber-400'
+  return 'text-text-tertiary'
+}
+
+function PopoverRateLimitPills({ rateLimits }: { rateLimits: RateLimits }) {
+  const p5h = Math.round(Math.min(100, rateLimits.window_5h.used_percentage))
+  const p7d = Math.round(Math.min(100, rateLimits.window_7d.used_percentage))
+
+  return (
+    <div className="mt-1.5 flex items-center gap-3 text-[10px] tabular-nums">
+      <span className={rateLimitColor(p5h)}>5h: {p5h}%</span>
+      <span className={rateLimitColor(p7d)}>7d: {p7d}%</span>
     </div>
   )
 }
