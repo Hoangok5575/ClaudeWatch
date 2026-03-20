@@ -82,6 +82,16 @@ struct LargeWidgetView: View {
                 .padding(.bottom, 10)
             }
 
+            // Rate limits
+            if let rl = data.rateLimits, rl.dataAvailable {
+                HStack(spacing: 8) {
+                    RateLimitBarView(label: "5h", percent: rl.window5hPercent, resetsAt: rl.window5hResetsAt, renderingMode: renderingMode)
+                    RateLimitBarView(label: "7d", percent: rl.window7dPercent, resetsAt: rl.window7dResetsAt, renderingMode: renderingMode)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+            }
+
             // Separator
             Rectangle()
                 .fill(WidgetColors.border)
@@ -240,5 +250,60 @@ struct PromoBannerView: View {
                 : WidgetColors.surfaceRaised(for: renderingMode)
         )
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+/// Rate limit progress bar with label, percentage, and optional countdown
+struct RateLimitBarView: View {
+    let label: String
+    let percent: Double
+    let resetsAt: String?
+    var renderingMode: WidgetRenderingMode = .fullColor
+
+    private var clamped: Double { min(100, percent) }
+
+    private var countdown: Int? {
+        guard let resetsAt = resetsAt, !resetsAt.isEmpty else { return nil }
+        guard let date = ISO8601DateFormatter().date(from: resetsAt) else { return nil }
+        let seconds = Int(date.timeIntervalSinceNow)
+        return seconds > 0 ? seconds : nil
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(label)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(WidgetColors.textTertiary(for: renderingMode))
+                Spacer()
+                Text("\(Int(clamped))%")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(WidgetColors.rateLimitColor(for: percent, mode: renderingMode))
+                    .monospacedDigit()
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(WidgetColors.border)
+                        .frame(height: 4)
+
+                    Capsule()
+                        .fill(WidgetColors.rateLimitColor(for: percent, mode: renderingMode))
+                        .frame(width: geo.size.width * clamped / 100, height: 4)
+                }
+            }
+            .frame(height: 4)
+
+            if let secs = countdown {
+                Text(formatCountdown(secs))
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(WidgetColors.textTertiary(for: renderingMode))
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(WidgetColors.surfaceRaised(for: renderingMode))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }

@@ -9,6 +9,7 @@ struct WidgetStatsPayload: Codable {
     let instances: [InstanceData]
     let usage: UsageData?
     let promo: PromoData?
+    let rateLimits: RateLimitData?
 
     private static let logger = Logger(
         subsystem: "com.zkidzdev.claudewatch.widget",
@@ -35,6 +36,14 @@ struct WidgetStatsPayload: Codable {
         let promoActive: Bool
         let expiresInSeconds: Int?
         let promoPeriod: String
+    }
+
+    struct RateLimitData: Codable {
+        let window5hPercent: Double
+        let window7dPercent: Double
+        let window5hResetsAt: String?
+        let window7dResetsAt: String?
+        let dataAvailable: Bool
     }
 
     struct InstanceData: Codable, Identifiable {
@@ -218,7 +227,8 @@ struct WidgetStatsPayload: Codable {
         stats: Stats(total: 0, active: 0, idle: 0, exited: 0),
         instances: [],
         usage: nil,
-        promo: nil
+        promo: nil,
+        rateLimits: nil
     )
 }
 

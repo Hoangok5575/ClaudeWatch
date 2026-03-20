@@ -55,4 +55,15 @@ enum WidgetColors {
     static func statusColor(for status: String, mode: WidgetRenderingMode) -> Color {
         mode == .accented ? .white : statusColor(for: status)
     }
+
+    // Rate limit colors matching Dashboard thresholds (50% amber, 80% red)
+    static let amber = Color(red: 251 / 255, green: 191 / 255, blue: 36 / 255)
+    static let red = Color(red: 248 / 255, green: 113 / 255, blue: 113 / 255)
+
+    static func rateLimitColor(for percent: Double, mode: WidgetRenderingMode) -> Color {
+        if mode == .accented { return .white }
+        if percent >= 80 { return red }
+        if percent >= 50 { return amber }
+        return statusActive
+    }
 }

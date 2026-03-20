@@ -1,6 +1,20 @@
 import SwiftUI
 import WidgetKit
 
+/// Compact rate limit pill: "5h: 42%" with color coding
+struct RateLimitPill: View {
+    let label: String
+    let percent: Double
+    var renderingMode: WidgetRenderingMode = .fullColor
+
+    var body: some View {
+        Text("\(label): \(Int(min(100, percent)))%")
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .foregroundStyle(WidgetColors.rateLimitColor(for: percent, mode: renderingMode))
+            .monospacedDigit()
+    }
+}
+
 /// Medium widget: stats bar + usage bar + 3 instance rows
 struct MediumWidgetView: View {
     let data: WidgetStatsPayload
@@ -48,6 +62,16 @@ struct MediumWidgetView: View {
                         .foregroundStyle(WidgetColors.textSecondary(for: renderingMode))
                 }
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .padding(.horizontal, 16)
+                .padding(.bottom, 6)
+            }
+
+            // Rate limit pills
+            if let rl = data.rateLimits, rl.dataAvailable {
+                HStack(spacing: 8) {
+                    RateLimitPill(label: "5h", percent: rl.window5hPercent, renderingMode: renderingMode)
+                    RateLimitPill(label: "7d", percent: rl.window7dPercent, renderingMode: renderingMode)
+                }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 6)
             }

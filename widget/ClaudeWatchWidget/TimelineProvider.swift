@@ -59,6 +59,7 @@ extension WidgetStatsPayload {
             InstanceData(pid: 5, projectName: "mobile-app", status: "idle", cpuPercent: 0.0, memPercent: 0.5, elapsedSeconds: 5400)
         ],
         usage: UsageData(totalCostUSD: 425.94, totalInputTokens: 1_981_851, totalOutputTokens: 2_697_252, totalCacheReadTokens: 455_842_215, dataAvailable: true),
-        promo: PromoData(is2x: true, promoActive: true, expiresInSeconds: 6180, promoPeriod: "March 13–27, 2026")
+        promo: PromoData(is2x: true, promoActive: true, expiresInSeconds: 6180, promoPeriod: "March 13–27, 2026"),
+        rateLimits: RateLimitData(window5hPercent: 42, window7dPercent: 67, window5hResetsAt: nil, window7dResetsAt: nil, dataAvailable: true)
     )
 }

@@ -45,6 +45,14 @@ struct SmallWidgetView: View {
                     .monospacedDigit()
             }
 
+            // Rate limits
+            if let rl = data.rateLimits, rl.dataAvailable {
+                HStack(spacing: 6) {
+                    RateLimitPill(label: "5h", percent: rl.window5hPercent, renderingMode: renderingMode)
+                    RateLimitPill(label: "7d", percent: rl.window7dPercent, renderingMode: renderingMode)
+                }
+            }
+
             // Top active project name
             if let top = data.instances.first(where: { $0.isActive }) {
                 Text(top.projectName)
