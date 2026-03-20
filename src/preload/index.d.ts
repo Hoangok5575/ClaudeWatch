@@ -4,7 +4,8 @@ import type {
   SessionHistoryEntry,
   UpdaterStatusPayload,
   UsageStats,
-  PromoStatus
+  PromoStatus,
+  RateLimits
 } from '../renderer/lib/types'
 
 export interface ElectronAPI {
@@ -26,6 +27,8 @@ export interface ElectronAPI {
   onUsageUpdate: (callback: (data: UsageStats) => void) => () => void
   getPromoStatus: () => Promise<PromoStatus | null>
   onPromoUpdate: (callback: (data: PromoStatus) => void) => () => void
+  getRateLimits: () => Promise<RateLimits | null>
+  onRateLimitsUpdate: (callback: (data: RateLimits) => void) => () => void
 }
 
 declare global {

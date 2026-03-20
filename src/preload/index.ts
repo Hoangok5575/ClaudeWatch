@@ -5,7 +5,8 @@ import type {
   SessionHistoryEntry,
   UpdaterStatusPayload,
   UsageStats,
-  PromoStatus
+  PromoStatus,
+  RateLimits
 } from '../renderer/lib/types'
 
 const api = {
@@ -84,6 +85,16 @@ const api = {
     ipcRenderer.on('promo:update', handler)
     return () => {
       ipcRenderer.removeListener('promo:update', handler)
+    }
+  },
+
+  getRateLimits: (): Promise<RateLimits | null> => ipcRenderer.invoke('ratelimits:get'),
+
+  onRateLimitsUpdate: (callback: (data: RateLimits) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: RateLimits): void => callback(data)
+    ipcRenderer.on('ratelimits:update', handler)
+    return () => {
+      ipcRenderer.removeListener('ratelimits:update', handler)
     }
   }
 }

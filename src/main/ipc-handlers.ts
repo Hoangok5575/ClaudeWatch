@@ -5,6 +5,7 @@ import type { SettingsStore } from './store'
 import type { AutoUpdaterManager } from './auto-updater'
 import type { UsageStatsReader } from './usage-stats'
 import type { PromoChecker } from './promo-checker'
+import type { RateLimitReader } from './rate-limit-reader'
 import type { NotificationManager } from './notifications'
 import type { AppSettings } from '../renderer/lib/types'
 
@@ -45,13 +46,22 @@ interface IpcHandlerOptions {
   updater?: AutoUpdaterManager
   usageReader?: UsageStatsReader
   promoChecker?: PromoChecker
+  rateLimitReader?: RateLimitReader
   notifications?: NotificationManager
   onOpenDashboard: () => void
 }
 
 export function setupIpcHandlers(options: IpcHandlerOptions): void {
-  const { tracker, store, updater, usageReader, promoChecker, notifications, onOpenDashboard } =
-    options
+  const {
+    tracker,
+    store,
+    updater,
+    usageReader,
+    promoChecker,
+    rateLimitReader,
+    notifications,
+    onOpenDashboard
+  } = options
 
   const beginQuit = (): void => {
     ;(app as Electron.App & { isQuitting?: boolean }).isQuitting = true
@@ -138,6 +148,10 @@ export function setupIpcHandlers(options: IpcHandlerOptions): void {
 
   ipcMain.handle('promo:get', () => {
     return promoChecker?.getLastData() ?? null
+  })
+
+  ipcMain.handle('ratelimits:get', () => {
+    return rateLimitReader?.getLastData() ?? null
   })
 
   ipcMain.handle('notifications:check-permission', () => {
