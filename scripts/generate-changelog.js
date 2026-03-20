@@ -186,8 +186,14 @@ const commits = getCommits(tags.current)
 const categories = categorize(commits)
 
 const hasContent = Object.values(categories).some((c) => c.items.length > 0)
+
 if (!hasContent) {
+  // Always write the file so electron-builder doesn't fail
+  const fallback = `ClaudeWatch v${currentVersion}\n\nBug fixes and improvements.`
+  const releaseNotesPath = path.join(ROOT, 'release-notes.md')
+  fs.writeFileSync(releaseNotesPath, fallback, 'utf-8')
   console.log(`No conventional commits found since ${tags.current || 'beginning'}`)
+  console.log(`  → Wrote fallback ${releaseNotesPath}`)
   process.exit(0)
 }
 
