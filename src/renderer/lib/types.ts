@@ -172,6 +172,18 @@ export interface PromoStatus {
   peakHoursLocal: string
 }
 
+export interface RateLimitWindow {
+  used_percentage: number
+  resets_at: string | null
+}
+
+export interface RateLimits {
+  window_5h: RateLimitWindow
+  window_7d: RateLimitWindow
+  updated_at: string | null
+  dataAvailable: boolean
+}
+
 export type IpcChannels =
   | 'instances:update'
   | 'instances:get'
@@ -191,6 +203,8 @@ export type IpcChannels =
   | 'usage:update'
   | 'promo:get'
   | 'promo:update'
+  | 'ratelimits:get'
+  | 'ratelimits:update'
   | 'notifications:check-permission'
   | 'notifications:open-settings'
   | 'notifications:send-test'
