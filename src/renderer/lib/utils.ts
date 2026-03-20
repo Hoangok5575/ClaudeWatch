@@ -77,3 +77,8 @@ export function formatCountdown(seconds: number): string {
   if (h > 0) return `${h}h ${m}m`
   return `${m}m`
 }
+
+export function secondsUntilReset(isoTimestamp: string | null): number {
+  if (!isoTimestamp) return 0
+  return Math.max(0, Math.floor((new Date(isoTimestamp).getTime() - Date.now()) / 1000))
+}
