@@ -10,7 +10,8 @@ describe('useRateLimits', () => {
     window_5h: { used_percentage: 45, resets_at: '2026-03-20T20:00:00Z' },
     window_7d: { used_percentage: 62, resets_at: '2026-03-27T00:00:00Z' },
     updated_at: '2026-03-20T15:00:00Z',
-    dataAvailable: true
+    dataAvailable: true,
+    isStale: false
   }
 
   beforeEach(() => {

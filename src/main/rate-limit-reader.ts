@@ -16,7 +16,8 @@ const EMPTY_RATE_LIMITS: RateLimits = {
   window_5h: { ...EMPTY_WINDOW },
   window_7d: { ...EMPTY_WINDOW },
   updated_at: null,
-  dataAvailable: false
+  dataAvailable: false,
+  isStale: false
 }
 
 /** Maximum age (in ms) before cached rate-limit data is considered stale. */
@@ -44,21 +45,18 @@ export class RateLimitReader {
       const updatedAt = data.updated_at ?? null
       if (updatedAt) {
         const age = Date.now() - new Date(updatedAt).getTime()
-        if (age > STALENESS_THRESHOLD_MS) {
-          result = { ...EMPTY_RATE_LIMITS }
-        } else {
-          result = {
-            window_5h: {
-              used_percentage: data.window_5h?.used_percentage ?? 0,
-              resets_at: data.window_5h?.resets_at ?? null
-            },
-            window_7d: {
-              used_percentage: data.window_7d?.used_percentage ?? 0,
-              resets_at: data.window_7d?.resets_at ?? null
-            },
-            updated_at: updatedAt,
-            dataAvailable: true
-          }
+        result = {
+          window_5h: {
+            used_percentage: data.window_5h?.used_percentage ?? 0,
+            resets_at: data.window_5h?.resets_at ?? null
+          },
+          window_7d: {
+            used_percentage: data.window_7d?.used_percentage ?? 0,
+            resets_at: data.window_7d?.resets_at ?? null
+          },
+          updated_at: updatedAt,
+          dataAvailable: true,
+          isStale: age > STALENESS_THRESHOLD_MS
         }
       } else {
         result = { ...EMPTY_RATE_LIMITS }

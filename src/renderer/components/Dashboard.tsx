@@ -513,12 +513,17 @@ function RateLimitSection({ rateLimits }: { rateLimits: RateLimits | null }) {
   if (!rateLimits?.dataAvailable) return null
 
   return (
-    <div>
+    <div className={cn(rateLimits.isStale && 'opacity-60')}>
       <div
-        className="mb-2 text-caption uppercase tracking-wider text-text-tertiary"
+        className="mb-2 flex items-center gap-2 text-caption uppercase tracking-wider text-text-tertiary"
         aria-hidden="true"
       >
-        Rate Limits
+        <span>Rate Limits</span>
+        {rateLimits.isStale && rateLimits.updated_at && (
+          <span className="normal-case tracking-normal text-[10px]">
+            (updated {timeAgo(new Date(rateLimits.updated_at))})
+          </span>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3" role="region" aria-label="Rate limit usage">
         <RateLimitBar label="5-hour" window={rateLimits.window_5h} />

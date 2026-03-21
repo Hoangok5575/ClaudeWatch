@@ -182,6 +182,7 @@ export interface RateLimits {
   window_7d: RateLimitWindow
   updated_at: string | null
   dataAvailable: boolean
+  isStale: boolean
 }
 
 export type IpcChannels =

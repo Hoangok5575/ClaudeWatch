@@ -387,7 +387,12 @@ function PopoverRateLimitPills({ rateLimits }: { rateLimits: RateLimits }) {
   const p7d = Math.round(Math.min(100, rateLimits.window_7d.used_percentage))
 
   return (
-    <div className="mt-1.5 flex items-center gap-3 text-[10px] tabular-nums">
+    <div
+      className={cn(
+        'mt-1.5 flex items-center gap-3 text-[10px] tabular-nums',
+        rateLimits.isStale && 'opacity-60'
+      )}
+    >
       <span className={rateLimitColor(p5h)}>5h: {p5h}%</span>
       <span className={rateLimitColor(p7d)}>7d: {p7d}%</span>
     </div>

@@ -44,12 +44,13 @@ describe('RateLimitReader', () => {
     vi.useRealTimers()
   })
 
-  it('reads fresh data and sets dataAvailable=true', async () => {
+  it('reads fresh data and sets dataAvailable=true, isStale=false', async () => {
     mockReadFile.mockResolvedValue(freshRateLimitsJson())
     const reader = new RateLimitReader([])
     const result = await reader.read()
 
     expect(result.dataAvailable).toBe(true)
+    expect(result.isStale).toBe(false)
     expect(result.window_5h.used_percentage).toBe(45)
     expect(result.window_7d.used_percentage).toBe(62)
     expect(result.window_7d.resets_at).toBe('2026-03-27T00:00:00Z')
@@ -61,16 +62,20 @@ describe('RateLimitReader', () => {
     const result = await reader.read()
 
     expect(result.dataAvailable).toBe(false)
+    expect(result.isStale).toBe(false)
     expect(result.window_5h.used_percentage).toBe(0)
   })
 
-  it('returns dataAvailable=false when data is stale (>5 min)', async () => {
+  it('returns dataAvailable=true and isStale=true when data is stale (>5 min)', async () => {
     const staleTime = new Date(Date.now() - 6 * 60 * 1000).toISOString()
     mockReadFile.mockResolvedValue(freshRateLimitsJson({ updated_at: staleTime }))
     const reader = new RateLimitReader([])
     const result = await reader.read()
 
-    expect(result.dataAvailable).toBe(false)
+    expect(result.dataAvailable).toBe(true)
+    expect(result.isStale).toBe(true)
+    expect(result.window_5h.used_percentage).toBe(45)
+    expect(result.window_7d.used_percentage).toBe(62)
   })
 
   it('returns dataAvailable=false for malformed JSON', async () => {
@@ -79,6 +84,7 @@ describe('RateLimitReader', () => {
     const result = await reader.read()
 
     expect(result.dataAvailable).toBe(false)
+    expect(result.isStale).toBe(false)
   })
 
   it('returns dataAvailable=false when updated_at is missing', async () => {
@@ -92,6 +98,7 @@ describe('RateLimitReader', () => {
     const result = await reader.read()
 
     expect(result.dataAvailable).toBe(false)
+    expect(result.isStale).toBe(false)
   })
 
   it('broadcasts to BrowserWindows on read', async () => {
