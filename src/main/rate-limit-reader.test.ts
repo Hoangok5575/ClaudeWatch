@@ -205,4 +205,123 @@ describe('RateLimitReader', () => {
     // Should not throw
     await reader.read()
   })
+
+  it('resets used_percentage to 0 when 5h window resets_at is in the past', async () => {
+    mockReadFile.mockResolvedValue(
+      freshRateLimitsJson({
+        window_5h: { used_percentage: 41, resets_at: '2026-03-20T10:00:00Z' },
+        window_7d: { used_percentage: 19, resets_at: '2026-03-27T00:00:00Z' }
+      })
+    )
+    const reader = new RateLimitReader([])
+    const result = await reader.read()
+
+    expect(result.window_5h.used_percentage).toBe(0)
+    expect(result.window_7d.used_percentage).toBe(19)
+  })
+
+  it('resets used_percentage to 0 when 7d window resets_at is in the past', async () => {
+    mockReadFile.mockResolvedValue(
+      freshRateLimitsJson({
+        window_5h: { used_percentage: 30, resets_at: '2026-03-20T20:00:00Z' },
+        window_7d: { used_percentage: 62, resets_at: '2026-03-19T00:00:00Z' }
+      })
+    )
+    const reader = new RateLimitReader([])
+    const result = await reader.read()
+
+    expect(result.window_5h.used_percentage).toBe(30)
+    expect(result.window_7d.used_percentage).toBe(0)
+  })
+
+  it('resets both windows when both resets_at are in the past', async () => {
+    mockReadFile.mockResolvedValue(
+      freshRateLimitsJson({
+        window_5h: { used_percentage: 80, resets_at: '2026-03-20T10:00:00Z' },
+        window_7d: { used_percentage: 50, resets_at: '2026-03-19T00:00:00Z' }
+      })
+    )
+    const reader = new RateLimitReader([])
+    const result = await reader.read()
+
+    expect(result.window_5h.used_percentage).toBe(0)
+    expect(result.window_7d.used_percentage).toBe(0)
+  })
+
+  it('does not reset percentage when resets_at is in the future', async () => {
+    mockReadFile.mockResolvedValue(
+      freshRateLimitsJson({
+        window_5h: { used_percentage: 45, resets_at: '2026-03-20T20:00:00Z' },
+        window_7d: { used_percentage: 62, resets_at: '2026-03-27T00:00:00Z' }
+      })
+    )
+    const reader = new RateLimitReader([])
+    const result = await reader.read()
+
+    expect(result.window_5h.used_percentage).toBe(45)
+    expect(result.window_7d.used_percentage).toBe(62)
+  })
+
+  it('sets isVeryStale=true when data is older than 1 hour', async () => {
+    const veryStaleTime = new Date(Date.now() - 61 * 60 * 1000).toISOString()
+    mockReadFile.mockResolvedValue(freshRateLimitsJson({ updated_at: veryStaleTime }))
+    const reader = new RateLimitReader([])
+    const result = await reader.read()
+
+    expect(result.dataAvailable).toBe(true)
+    expect(result.isStale).toBe(true)
+    expect(result.isVeryStale).toBe(true)
+  })
+
+  it('sets isVeryStale=false when data is less than 1 hour old', async () => {
+    const recentTime = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    mockReadFile.mockResolvedValue(freshRateLimitsJson({ updated_at: recentTime }))
+    const reader = new RateLimitReader([])
+    const result = await reader.read()
+
+    expect(result.isStale).toBe(true)
+    expect(result.isVeryStale).toBe(false)
+  })
+
+  it('reads five_hour/seven_day keys as fallback for window_5h/window_7d', async () => {
+    mockReadFile.mockResolvedValue(
+      JSON.stringify({
+        five_hour: { used_percentage: 33, resets_at: '2026-03-20T20:00:00Z' },
+        seven_day: { used_percentage: 55, resets_at: '2026-03-27T00:00:00Z' },
+        updated_at: new Date().toISOString()
+      })
+    )
+    const reader = new RateLimitReader([])
+    const result = await reader.read()
+
+    expect(result.dataAvailable).toBe(true)
+    expect(result.window_5h.used_percentage).toBe(33)
+    expect(result.window_7d.used_percentage).toBe(55)
+  })
+
+  it('prefers window_5h/window_7d over five_hour/seven_day', async () => {
+    mockReadFile.mockResolvedValue(
+      JSON.stringify({
+        window_5h: { used_percentage: 10, resets_at: '2026-03-20T20:00:00Z' },
+        five_hour: { used_percentage: 99, resets_at: '2026-03-20T20:00:00Z' },
+        window_7d: { used_percentage: 20, resets_at: '2026-03-27T00:00:00Z' },
+        seven_day: { used_percentage: 88, resets_at: '2026-03-27T00:00:00Z' },
+        updated_at: new Date().toISOString()
+      })
+    )
+    const reader = new RateLimitReader([])
+    const result = await reader.read()
+
+    expect(result.window_5h.used_percentage).toBe(10)
+    expect(result.window_7d.used_percentage).toBe(20)
+  })
+
+  it('sets isVeryStale=false when data is fresh', async () => {
+    mockReadFile.mockResolvedValue(freshRateLimitsJson())
+    const reader = new RateLimitReader([])
+    const result = await reader.read()
+
+    expect(result.isStale).toBe(false)
+    expect(result.isVeryStale).toBe(false)
+  })
 })

@@ -88,7 +88,8 @@ function makeRateLimitReader(overrides = {}): RateLimitReader {
       window_7d: { used_percentage: 62, resets_at: '2026-03-27T00:00:00Z' },
       updated_at: '2026-03-20T15:00:00Z',
       dataAvailable: true,
-      isStale: false
+      isStale: false,
+      isVeryStale: false
     }),
     ...overrides
   } as unknown as RateLimitReader

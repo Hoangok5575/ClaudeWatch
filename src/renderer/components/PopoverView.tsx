@@ -383,6 +383,8 @@ function rateLimitColor(percent: number): string {
 }
 
 function PopoverRateLimitPills({ rateLimits }: { rateLimits: RateLimits }) {
+  if (rateLimits.isVeryStale) return null
+
   const p5h = Math.round(Math.min(100, rateLimits.window_5h.used_percentage))
   const p7d = Math.round(Math.min(100, rateLimits.window_7d.used_percentage))
 

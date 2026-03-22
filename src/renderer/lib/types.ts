@@ -183,6 +183,7 @@ export interface RateLimits {
   updated_at: string | null
   dataAvailable: boolean
   isStale: boolean
+  isVeryStale: boolean
 }
 
 export type IpcChannels =

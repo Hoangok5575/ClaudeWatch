@@ -525,10 +525,16 @@ function RateLimitSection({ rateLimits }: { rateLimits: RateLimits | null }) {
           </span>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3" role="region" aria-label="Rate limit usage">
-        <RateLimitBar label="5-hour" window={rateLimits.window_5h} />
-        <RateLimitBar label="7-day" window={rateLimits.window_7d} />
-      </div>
+      {rateLimits.isVeryStale ? (
+        <div className="text-[10px] text-text-tertiary" role="status">
+          Rate limits outdated — waiting for Claude Code to update
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3" role="region" aria-label="Rate limit usage">
+          <RateLimitBar label="5-hour" window={rateLimits.window_5h} />
+          <RateLimitBar label="7-day" window={rateLimits.window_7d} />
+        </div>
+      )}
     </div>
   )
 }

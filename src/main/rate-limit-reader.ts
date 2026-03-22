@@ -4,9 +4,16 @@ import { join } from 'path'
 import { BrowserWindow } from 'electron'
 import type { RateLimits, RateLimitWindow } from '../renderer/lib/types'
 
+interface RateLimitWindowData {
+  used_percentage?: number
+  resets_at?: string
+}
+
 interface RateLimitsFileData {
-  window_5h?: { used_percentage?: number; resets_at?: string }
-  window_7d?: { used_percentage?: number; resets_at?: string }
+  window_5h?: RateLimitWindowData
+  window_7d?: RateLimitWindowData
+  five_hour?: RateLimitWindowData
+  seven_day?: RateLimitWindowData
   updated_at?: string
 }
 
@@ -17,11 +24,29 @@ const EMPTY_RATE_LIMITS: RateLimits = {
   window_7d: { ...EMPTY_WINDOW },
   updated_at: null,
   dataAvailable: false,
-  isStale: false
+  isStale: false,
+  isVeryStale: false
 }
 
 /** Maximum age (in ms) before cached rate-limit data is considered stale. */
 const STALENESS_THRESHOLD_MS = 5 * 60 * 1000
+
+/** Maximum age (in ms) before data is too old to be useful. */
+const VERY_STALE_THRESHOLD_MS = 60 * 60 * 1000
+
+/** If a window's reset time has passed, usage must be 0 (the window has reset). */
+function resolveWindow(
+  win: { used_percentage?: number; resets_at?: string } | undefined,
+  now: number
+): RateLimitWindow {
+  const resetsAt = win?.resets_at ?? null
+  const rawPercent = win?.used_percentage ?? 0
+  const hasExpired = resetsAt ? new Date(resetsAt).getTime() < now : false
+  return {
+    used_percentage: hasExpired ? 0 : rawPercent,
+    resets_at: resetsAt
+  }
+}
 
 export class RateLimitReader {
   private getWindows: (() => BrowserWindow | null)[]
@@ -44,19 +69,15 @@ export class RateLimitReader {
       // Check staleness
       const updatedAt = data.updated_at ?? null
       if (updatedAt) {
-        const age = Date.now() - new Date(updatedAt).getTime()
+        const now = Date.now()
+        const age = now - new Date(updatedAt).getTime()
         result = {
-          window_5h: {
-            used_percentage: data.window_5h?.used_percentage ?? 0,
-            resets_at: data.window_5h?.resets_at ?? null
-          },
-          window_7d: {
-            used_percentage: data.window_7d?.used_percentage ?? 0,
-            resets_at: data.window_7d?.resets_at ?? null
-          },
+          window_5h: resolveWindow(data.window_5h ?? data.five_hour, now),
+          window_7d: resolveWindow(data.window_7d ?? data.seven_day, now),
           updated_at: updatedAt,
           dataAvailable: true,
-          isStale: age > STALENESS_THRESHOLD_MS
+          isStale: age > STALENESS_THRESHOLD_MS,
+          isVeryStale: age > VERY_STALE_THRESHOLD_MS
         }
       } else {
         result = { ...EMPTY_RATE_LIMITS }
