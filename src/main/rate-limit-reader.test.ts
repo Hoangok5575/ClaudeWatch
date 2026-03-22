@@ -1,10 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const mockReadFile = vi.hoisted(() => vi.fn())
+const mockWriteFile = vi.hoisted(() => vi.fn())
+const mockCopyFile = vi.hoisted(() => vi.fn())
+const mockChmod = vi.hoisted(() => vi.fn())
 const mockHomedir = vi.hoisted(() => vi.fn().mockReturnValue('/Users/test'))
 
 vi.mock('fs/promises', () => ({
-  readFile: mockReadFile
+  readFile: mockReadFile,
+  writeFile: mockWriteFile,
+  copyFile: mockCopyFile,
+  chmod: mockChmod
 }))
 
 vi.mock('os', () => ({
@@ -323,5 +329,78 @@ describe('RateLimitReader', () => {
 
     expect(result.isStale).toBe(false)
     expect(result.isVeryStale).toBe(false)
+  })
+
+  describe('isStatuslineConfigured', () => {
+    it('returns true when statusLine is configured', async () => {
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({ statusLine: { type: 'command', command: 'bash foo.sh' } })
+      )
+      const reader = new RateLimitReader([])
+      const result = await reader.isStatuslineConfigured()
+      expect(result).toBe(true)
+    })
+
+    it('returns false when statusLine is not in settings', async () => {
+      mockReadFile.mockResolvedValue(JSON.stringify({ permissions: {} }))
+      const reader = new RateLimitReader([])
+      const result = await reader.isStatuslineConfigured()
+      expect(result).toBe(false)
+    })
+
+    it('returns false when settings.json is missing', async () => {
+      mockReadFile.mockRejectedValue(new Error('ENOENT'))
+      const reader = new RateLimitReader([])
+      const result = await reader.isStatuslineConfigured()
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('setupStatusline', () => {
+    it('copies script, sets permissions, and updates settings', async () => {
+      mockReadFile.mockResolvedValue(JSON.stringify({ permissions: {} }))
+      mockCopyFile.mockResolvedValue(undefined)
+      mockChmod.mockResolvedValue(undefined)
+      mockWriteFile.mockResolvedValue(undefined)
+
+      const reader = new RateLimitReader([])
+      const result = await reader.setupStatusline('/app/resources/claudewatch-statusline.sh')
+
+      expect(result).toBe(true)
+      expect(mockCopyFile).toHaveBeenCalledWith(
+        '/app/resources/claudewatch-statusline.sh',
+        '/Users/test/.claude/claudewatch-statusline.sh'
+      )
+      expect(mockChmod).toHaveBeenCalledWith('/Users/test/.claude/claudewatch-statusline.sh', 0o755)
+      expect(mockWriteFile).toHaveBeenCalledWith(
+        '/Users/test/.claude/settings.json',
+        expect.stringContaining('"statusLine"'),
+        'utf-8'
+      )
+    })
+
+    it('does not overwrite existing statusLine config', async () => {
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({ statusLine: { type: 'command', command: 'bash existing.sh' } })
+      )
+      mockCopyFile.mockResolvedValue(undefined)
+      mockChmod.mockResolvedValue(undefined)
+      mockWriteFile.mockResolvedValue(undefined)
+
+      const reader = new RateLimitReader([])
+      const result = await reader.setupStatusline('/app/resources/claudewatch-statusline.sh')
+
+      expect(result).toBe(true)
+      // Should still copy the script but NOT call writeFile since statusLine already exists
+      expect(mockCopyFile).toHaveBeenCalled()
+      expect(mockWriteFile).not.toHaveBeenCalled()
+    })
+
+    it('returns false on failure', async () => {
+      mockCopyFile.mockRejectedValue(new Error('Permission denied'))
+      const reader = new RateLimitReader([])
+      const result = await reader.setupStatusline('/app/resources/claudewatch-statusline.sh')
+      expect(result).toBe(false)
+    })
   })
 })

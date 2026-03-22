@@ -96,7 +96,12 @@ const api = {
     return () => {
       ipcRenderer.removeListener('ratelimits:update', handler)
     }
-  }
+  },
+
+  isStatuslineConfigured: (): Promise<boolean> =>
+    ipcRenderer.invoke('ratelimits:statusline-status'),
+
+  setupRateLimitSync: (): Promise<boolean> => ipcRenderer.invoke('ratelimits:setup-statusline')
 }
 
 export type ElectronAPI = typeof api

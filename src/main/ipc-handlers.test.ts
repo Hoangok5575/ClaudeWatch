@@ -91,6 +91,8 @@ function makeRateLimitReader(overrides = {}): RateLimitReader {
       isStale: false,
       isVeryStale: false
     }),
+    isStatuslineConfigured: vi.fn().mockResolvedValue(true),
+    setupStatusline: vi.fn().mockResolvedValue(true),
     ...overrides
   } as unknown as RateLimitReader
 }
@@ -145,6 +147,8 @@ describe('setupIpcHandlers', () => {
         'usage:refresh',
         'promo:get',
         'ratelimits:get',
+        'ratelimits:statusline-status',
+        'ratelimits:setup-statusline',
         'notifications:check-permission',
         'notifications:open-settings',
         'notifications:send-test',

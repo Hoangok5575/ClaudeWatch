@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import {
   Search,
   Activity,
@@ -526,15 +527,60 @@ function RateLimitSection({ rateLimits }: { rateLimits: RateLimits | null }) {
         )}
       </div>
       {rateLimits.isVeryStale ? (
-        <div className="text-[10px] text-text-tertiary" role="status">
-          Rate limits outdated — waiting for Claude Code to update
-        </div>
+        <RateLimitStaleMessage />
       ) : (
         <div className="grid grid-cols-2 gap-3" role="region" aria-label="Rate limit usage">
           <RateLimitBar label="5-hour" window={rateLimits.window_5h} />
           <RateLimitBar label="7-day" window={rateLimits.window_7d} />
         </div>
       )}
+    </div>
+  )
+}
+
+function RateLimitStaleMessage() {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done'>('idle')
+  const [hasStatusline, setHasStatusline] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    window.api
+      .isStatuslineConfigured?.()
+      .then(setHasStatusline)
+      .catch(() => setHasStatusline(null))
+  }, [])
+
+  const handleSetup = async () => {
+    setStatus('loading')
+    const ok = await window.api.setupRateLimitSync?.()
+    setStatus(ok ? 'done' : 'idle')
+  }
+
+  if (hasStatusline !== false) {
+    return (
+      <div className="text-[10px] text-text-tertiary" role="status">
+        Rate limits outdated — waiting for Claude Code to update
+      </div>
+    )
+  }
+
+  if (status === 'done') {
+    return (
+      <div className="text-[10px] text-status-active" role="status">
+        Sync configured — rate limits will update on next Claude Code use
+      </div>
+    )
+  }
+
+  return (
+    <div className="text-[10px] text-text-tertiary" role="status">
+      Rate limits outdated —{' '}
+      <button
+        onClick={handleSetup}
+        disabled={status === 'loading'}
+        className="text-accent-primary underline hover:text-accent-primary/80 disabled:opacity-50"
+      >
+        {status === 'loading' ? 'Setting up...' : 'Set up sync'}
+      </button>
     </div>
   )
 }

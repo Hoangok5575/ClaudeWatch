@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises'
+import { readFile, writeFile, copyFile, chmod } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
 import { BrowserWindow } from 'electron'
@@ -111,6 +111,53 @@ export class RateLimitReader {
     if (this.interval) {
       clearInterval(this.interval)
       this.interval = null
+    }
+  }
+
+  async isStatuslineConfigured(): Promise<boolean> {
+    try {
+      const settingsPath = join(homedir(), '.claude', 'settings.json')
+      const raw = await readFile(settingsPath, 'utf-8')
+      const settings = JSON.parse(raw)
+      return !!settings.statusLine
+    } catch {
+      return false
+    }
+  }
+
+  async setupStatusline(scriptSource: string): Promise<boolean> {
+    try {
+      const claudeDir = join(homedir(), '.claude')
+      const settingsPath = join(claudeDir, 'settings.json')
+      const destPath = join(claudeDir, 'claudewatch-statusline.sh')
+
+      // Copy script
+      await copyFile(scriptSource, destPath)
+      await chmod(destPath, 0o755)
+
+      // Read existing settings
+      let settings: Record<string, unknown> = {}
+      try {
+        const raw = await readFile(settingsPath, 'utf-8')
+        settings = JSON.parse(raw)
+      } catch {
+        // Settings file doesn't exist or is malformed — start fresh
+      }
+
+      // Only add statusline if not already configured
+      if (settings.statusLine) {
+        return true
+      }
+
+      settings.statusLine = {
+        type: 'command',
+        command: `bash "${destPath}"`
+      }
+
+      await writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf-8')
+      return true
+    } catch {
+      return false
     }
   }
 

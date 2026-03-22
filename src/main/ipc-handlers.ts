@@ -1,4 +1,5 @@
 import { ipcMain, BrowserWindow, app, shell } from 'electron'
+import { join } from 'path'
 import { openTerminal } from './terminal-opener'
 import type { SessionTracker } from './session-tracker'
 import type { SettingsStore } from './store'
@@ -152,6 +153,20 @@ export function setupIpcHandlers(options: IpcHandlerOptions): void {
 
   ipcMain.handle('ratelimits:get', () => {
     return rateLimitReader?.getLastData() ?? null
+  })
+
+  ipcMain.handle('ratelimits:statusline-status', async () => {
+    return rateLimitReader?.isStatuslineConfigured() ?? false
+  })
+
+  ipcMain.handle('ratelimits:setup-statusline', async () => {
+    if (!rateLimitReader) return false
+    const scriptSource = join(
+      app.isPackaged ? process.resourcesPath : app.getAppPath(),
+      'resources',
+      'claudewatch-statusline.sh'
+    )
+    return rateLimitReader.setupStatusline(scriptSource)
   })
 
   ipcMain.handle('notifications:check-permission', () => {
